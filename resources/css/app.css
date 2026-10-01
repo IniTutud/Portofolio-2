@@ -1,0 +1,827 @@
+@import 'tailwindcss';
+
+@source '../../resources/**/*.blade.php';
+@source '../../resources/**/*.vue';
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+@theme {
+    --font-sans: 'Trebuchet MS', ui-sans-serif, system-ui, sans-serif;
+    --color-night: #050506;
+    --color-lavender: #9498cc;
+    --color-lavender-light: #d8d9f3;
+    --color-ink: #111116;
+    --color-panel: #15151c;
+    --color-poster-canvas: #278d4e;
+    --color-poster-paper: #f4f0e5;
+    --color-poster-paper-alt: #f8f6ef;
+    --color-poster-paper-tint: #e9e6d7;
+    --color-poster-paper-input: #fffdf6;
+    --color-poster-ink: #172331;
+    --color-poster-copy: #334247;
+    --color-poster-copy-alt: #344344;
+    --color-poster-muted: #53605b;
+    --color-poster-green: #176b49;
+    --color-poster-green-dark: #0b503b;
+    --color-poster-blue: #2052b5;
+    --color-poster-blue-dark: #153f91;
+    --color-poster-yellow: #f0c33c;
+    --color-poster-on-accent: #ffffff;
+    --color-poster-rule: #c8c7c1;
+    --color-poster-shadow: #043425;
+    --color-poster-admin-background: #050506;
+    --color-poster-admin-panel: #15151c;
+    --color-poster-admin-panel-border: #44444a;
+    --color-poster-admin-input: #0e0e12;
+    --color-poster-admin-input-border: #505057;
+    --color-poster-admin-text: #ffffff;
+    --color-poster-admin-muted: #dedee0;
+    --color-poster-admin-rule: #393941;
+    --color-poster-admin-accent: #d8d9f3;
+    --color-poster-admin-accent-muted: #9498cc;
+    --color-poster-success-bg: #e2eee3;
+    --color-poster-success-text: #0b503b;
+    --color-poster-danger-bg: #f7e5d7;
+    --color-poster-danger-text: #8d2525;
+    --color-poster-danger: #991b1b;
+    --color-poster-danger-light: #fecaca;
+}
+
+@keyframes poster-drop-in {
+    0% {
+        opacity: 0;
+        filter: blur(10px) drop-shadow(0 18px 14px color-mix(in srgb, var(--color-poster-ink) 18%, transparent));
+        transform: translate3d(0, 7rem, 90px) rotateX(12deg) rotate(16deg) scale(0.68);
+    }
+
+    62% {
+        opacity: 1;
+        filter: blur(0) drop-shadow(0 18px 14px color-mix(in srgb, var(--color-poster-ink) 18%, transparent));
+        transform: translate3d(0, -1.2rem, 25px) rotateX(-3deg) rotate(-7deg) scale(1.1);
+    }
+
+    82% {
+        transform: translate3d(0, 0.35rem, 0) rotateX(1deg) rotate(1deg) scale(0.99);
+    }
+
+    100% {
+        opacity: 1;
+        filter: blur(0) drop-shadow(0 18px 14px color-mix(in srgb, var(--color-poster-ink) 18%, transparent));
+        transform: translate3d(0, 0, 0) rotateX(0) rotate(-3deg) scale(1.04);
+    }
+}
+
+/* The sheet opens first, then the portrait drops in and the copy follows. */
+@keyframes poster-folio-open {
+    0% {
+        opacity: 0;
+        transform: perspective(1400px) rotateX(-8deg) translate3d(0, 2rem, 0) scale(0.97);
+    }
+
+    72% {
+        opacity: 1;
+        transform: perspective(1400px) rotateX(1.5deg) translate3d(0, -0.25rem, 0) scale(1.005);
+    }
+
+    100% {
+        opacity: 1;
+        transform: perspective(1400px) rotateX(0) translate3d(0, 0, 0) scale(1);
+    }
+}
+
+@keyframes poster-paper-slam {
+    0% {
+        opacity: 0;
+        transform: translate3d(3rem, 2rem, -70px) rotateX(14deg) rotate(14deg) scale(0.66);
+    }
+
+    66% {
+        opacity: 1;
+        transform: translate3d(-0.5rem, -0.5rem, 20px) rotateX(-2deg) rotate(-5deg) scale(1.08);
+    }
+
+    84% {
+        transform: translate3d(0.2rem, 0, 0) rotateX(1deg) rotate(3deg) scale(0.99);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) rotate(2deg) scale(1);
+    }
+}
+
+@keyframes poster-copy-in {
+    from {
+        opacity: 0;
+        filter: blur(8px);
+        transform: translate3d(3rem, 0.7rem, 0) rotateY(-12deg) rotate(3deg);
+    }
+
+    to {
+        opacity: 1;
+        filter: blur(0);
+        transform: translate3d(0, 0, 0) rotateY(0) rotate(0);
+    }
+}
+
+@keyframes poster-name-reveal {
+    0% {
+        clip-path: inset(0 100% 0 0);
+        filter: blur(12px);
+        opacity: 0;
+        transform: translate3d(2rem, 0.35rem, 0) rotate(-5deg) scale(0.82);
+    }
+
+    72% {
+        clip-path: inset(0 -12% 0 0);
+        filter: blur(0);
+        opacity: 1;
+        transform: translate3d(-0.35rem, -0.2rem, 0) rotate(1deg) scale(1.06);
+    }
+
+    100% {
+        clip-path: inset(-8% -12%);
+        filter: blur(0);
+        opacity: 1;
+        transform: translate3d(0, 0, 0) rotate(0) scale(1);
+    }
+}
+
+@keyframes poster-stamp-in {
+    0% {
+        opacity: 0;
+        transform: translate3d(0, 0.75rem, 0) rotate(12deg) scale(1.35);
+    }
+
+    72% {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) rotate(-5deg) scale(0.96);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) rotate(-2deg) scale(1);
+    }
+}
+
+/* Emerald board and pinstripe texture echo the supplied desk-and-paper reference. */
+.poster-table {
+    background-color: var(--color-poster-canvas);
+    background-image:
+        radial-gradient(color-mix(in srgb, var(--color-poster-yellow) 28%, transparent) 1px, transparent 1.3px),
+        repeating-linear-gradient(90deg, transparent 0 46px, color-mix(in srgb, var(--color-poster-on-accent) 8%, transparent) 47px, transparent 48px);
+    background-position: 3px 3px, center;
+    background-size: 18px 18px, 48px 100%;
+}
+
+.poster-paper-tabs {
+    isolation: isolate;
+}
+
+.poster-paper-tab {
+    position: relative;
+    isolation: isolate;
+    transform: translateY(0);
+}
+
+.poster-paper-tab::before {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    background-color: var(--color-poster-paper-tint);
+    clip-path: polygon(0 7%, 9% 4%, 17% 6%, 26% 2%, 35% 5%, 44% 3%, 53% 6%, 63% 2%, 73% 5%, 82% 3%, 91% 6%, 100% 3%, 100% 100%, 0 100%);
+    filter:
+        drop-shadow(1px 0 0 var(--color-poster-ink))
+        drop-shadow(-1px 0 0 var(--color-poster-ink))
+        drop-shadow(0 -1px 0 var(--color-poster-ink))
+        drop-shadow(2px -2px 0 color-mix(in srgb, var(--color-poster-ink) 18%, transparent));
+    content: '';
+    transition: background-color 160ms ease, filter 160ms ease;
+}
+
+.poster-paper-tab:nth-child(3n + 1) {
+    transform: rotate(-0.45deg);
+}
+
+.poster-paper-tab:nth-child(3n) {
+    transform: rotate(0.35deg);
+}
+
+.poster-paper-tab[aria-current='location'] {
+    z-index: 1;
+    transform: translateY(-3px);
+}
+
+.poster-paper-tab[aria-current='location']::before {
+    background-color: var(--color-poster-paper);
+    filter:
+        drop-shadow(1px 0 0 var(--color-poster-ink))
+        drop-shadow(-1px 0 0 var(--color-poster-ink))
+        drop-shadow(0 -1px 0 var(--color-poster-ink))
+        drop-shadow(3px -3px 0 var(--color-poster-yellow));
+}
+
+.poster-paper-menu {
+    background-color: var(--color-poster-paper-tint);
+}
+
+.poster-paper-tab--mobile {
+    min-width: 0;
+    padding-block: 0.65rem;
+}
+
+.poster-paper-tab--mobile::before {
+    background-color: var(--color-poster-paper);
+    filter:
+        drop-shadow(1px 0 0 var(--color-poster-ink))
+        drop-shadow(-1px 0 0 var(--color-poster-ink))
+        drop-shadow(0 -1px 0 var(--color-poster-ink))
+        drop-shadow(2px 2px 0 color-mix(in srgb, var(--color-poster-ink) 16%, transparent));
+}
+
+.poster-paper-tab--mobile[aria-current='location']::before {
+    background-color: var(--color-poster-yellow);
+    filter:
+        drop-shadow(1px 0 0 var(--color-poster-ink))
+        drop-shadow(-1px 0 0 var(--color-poster-ink))
+        drop-shadow(0 -1px 0 var(--color-poster-ink))
+        drop-shadow(3px 3px 0 color-mix(in srgb, var(--color-poster-ink) 32%, transparent));
+}
+
+.poster-paper-tab:focus-visible {
+    outline: 3px solid var(--color-poster-blue);
+    outline-offset: 3px;
+}
+
+.poster-book {
+    position: relative;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 80rem;
+    margin-inline: auto;
+    padding-left: 1rem;
+}
+
+.poster-book-header {
+    min-height: 5.5rem;
+    align-items: flex-end;
+    padding-top: 0.5rem;
+}
+
+.poster-brand-tab {
+    isolation: isolate;
+    min-height: 5rem;
+    margin-bottom: -1px;
+}
+
+.poster-brand-tab::before {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    background-color: var(--color-poster-paper);
+    clip-path: polygon(0 0, 73% 0, 82% 3%, 89% 10%, 95% 19%, 100% 27%, 100% 100%, 0 100%);
+    filter:
+        drop-shadow(1px 0 0 var(--color-poster-ink))
+        drop-shadow(-1px 0 0 var(--color-poster-ink))
+        drop-shadow(0 -1px 0 var(--color-poster-ink))
+        drop-shadow(2px -2px 0 color-mix(in srgb, var(--color-poster-ink) 18%, transparent));
+    content: '';
+    transition: background-color 160ms ease, filter 160ms ease;
+}
+
+.poster-brand-tab:hover::before {
+    background-color: var(--color-poster-paper-tint);
+}
+
+.poster-book-binding {
+    position: absolute;
+    z-index: 20;
+    top: 5.5rem;
+    bottom: 1rem;
+    left: 0;
+    display: flex;
+    width: 1.5rem;
+    flex-direction: column;
+    justify-content: space-between;
+    pointer-events: none;
+}
+
+.poster-book-clip {
+    position: relative;
+    z-index: 1;
+    display: block;
+    width: 1.25rem;
+    height: 0.68rem;
+    flex: 0 0 auto;
+    margin-left: 0.2rem;
+    border: 1px solid #536267;
+    border-radius: 3px;
+    background: linear-gradient(180deg, #f0f4f4 0%, #c2cdd0 42%, #829196 54%, #e1e8e9 100%);
+    box-shadow:
+        1px 1px 0 var(--color-poster-ink),
+        2px 2px 1px color-mix(in srgb, var(--color-poster-ink) 38%, transparent);
+}
+
+.poster-book-clip::before {
+    content: none;
+}
+
+@media (hover: hover) {
+    .poster-paper-tab:not([aria-current='location']):hover::before {
+        background-color: var(--color-poster-paper);
+    }
+}
+
+/* Offset shadows distinguish the paper folio from the board beneath it. */
+.poster-folio {
+    isolation: isolate;
+    box-shadow:
+        12px 14px 0 color-mix(in srgb, var(--color-poster-shadow) 38%, transparent),
+        0 30px 70px color-mix(in srgb, var(--color-poster-shadow) 22%, transparent);
+    transform-origin: top center;
+}
+
+.poster-folio.poster-intro-ready {
+    animation: poster-folio-open 980ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.poster-section-number {
+    display: grid;
+    width: 2.15rem;
+    height: 2.15rem;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 2px solid var(--color-poster-ink);
+    border-radius: 50%;
+    font-size: 0.7rem;
+    font-weight: 900;
+    box-shadow: 2px 2px 0 var(--color-poster-ink);
+}
+
+.poster-section-number--green {
+    background: var(--color-poster-green);
+    color: var(--color-poster-on-accent);
+}
+
+.poster-section-number--blue {
+    background: var(--color-poster-blue);
+    color: var(--color-poster-on-accent);
+}
+
+.poster-section-number--yellow {
+    background: var(--color-poster-yellow);
+    color: var(--color-poster-ink);
+}
+
+.poster-admin-trigger {
+    display: grid;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex: 0 0 auto;
+    place-items: center;
+    text-decoration: none;
+}
+
+.poster-admin-trigger .poster-section-number {
+    transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.poster-admin-trigger:hover .poster-section-number,
+.poster-admin-trigger:focus-visible .poster-section-number {
+    box-shadow: 3px 3px 0 var(--color-poster-ink);
+    transform: rotate(-7deg) scale(1.05);
+}
+
+.poster-section-label {
+    display: inline-flex;
+    min-height: 2rem;
+    align-items: center;
+    border: 2px solid var(--color-poster-ink);
+    border-radius: 999px;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.65rem;
+    font-weight: 900;
+    line-height: 1.2;
+    text-transform: uppercase;
+    box-shadow: 3px 3px 0 var(--color-poster-ink);
+    transform: rotate(-2deg);
+}
+
+.poster-section-label--green {
+    background: var(--color-poster-green);
+    color: var(--color-poster-on-accent);
+}
+
+.poster-section-label--blue {
+    background: var(--color-poster-blue);
+    color: var(--color-poster-on-accent);
+    transform: rotate(2deg);
+}
+
+.poster-section-label--yellow {
+    background: var(--color-poster-yellow);
+    color: var(--color-poster-ink);
+}
+
+.poster-hero-stage {
+    isolation: isolate;
+    perspective: 1100px;
+}
+
+.poster-hero-stage::before {
+    position: absolute;
+    z-index: 0;
+    inset: 8% 10% 6%;
+    border: 2px solid var(--color-poster-ink);
+    background: var(--color-poster-paper);
+    box-shadow:
+        8px 8px 0 var(--color-poster-yellow),
+        10px 10px 0 color-mix(in srgb, var(--color-poster-ink) 12%, transparent);
+    content: '';
+}
+
+.poster-intro-ready .poster-hero-stage::before {
+    animation: poster-paper-slam 1120ms cubic-bezier(0.16, 1, 0.3, 1) 80ms both;
+}
+
+.poster-hero-stage::after {
+    position: absolute;
+    z-index: 0;
+    top: 10%;
+    right: 14%;
+    width: 1rem;
+    aspect-ratio: 1;
+    border: 2px solid var(--color-poster-ink);
+    border-radius: 50%;
+    background: var(--color-poster-blue);
+    box-shadow: 2px 3px 0 color-mix(in srgb, var(--color-poster-ink) 28%, transparent);
+    content: '';
+    transform: translateY(0.35rem);
+}
+
+.poster-hero-art {
+    transform-origin: center bottom;
+    filter: drop-shadow(0 18px 14px color-mix(in srgb, var(--color-poster-ink) 18%, transparent));
+    transform-style: preserve-3d;
+}
+
+.poster-intro-ready .poster-hero-art {
+    animation: poster-drop-in 1.5s cubic-bezier(0.16, 1, 0.3, 1) 300ms both;
+}
+
+.poster-intro-ready .poster-hero-copy > * {
+    animation: poster-copy-in 820ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.poster-intro-ready .poster-hero-copy > :nth-child(1) {
+    animation-delay: 520ms;
+}
+
+.poster-intro-ready .poster-hero-copy > :nth-child(2) {
+    animation-delay: 700ms;
+}
+
+.poster-intro-ready .poster-hero-copy > :nth-child(3) {
+    animation-delay: 1080ms;
+}
+
+.poster-intro-ready .poster-hero-copy > :nth-child(4) {
+    animation-delay: 1380ms;
+}
+
+.poster-intro-ready .poster-hero-copy > :nth-child(5) {
+    animation-delay: 1660ms;
+}
+
+.poster-hero-copy > .poster-status-stamp {
+    border: 1px solid var(--color-poster-ink);
+    background: var(--color-poster-yellow);
+    box-shadow: 3px 3px 0 var(--color-poster-blue);
+    padding: 0.55rem 0.75rem;
+    transform: rotate(-2deg);
+}
+
+.poster-intro-ready .poster-hero-copy > .poster-status-stamp {
+    animation: poster-stamp-in 940ms cubic-bezier(0.16, 1, 0.3, 1) 1380ms both;
+}
+
+.poster-hero-mark {
+    width: 0.75rem;
+    height: 0.75rem;
+    border: 2px solid var(--color-poster-ink);
+    background: var(--color-poster-yellow);
+    box-shadow: 2px 2px 0 var(--color-poster-blue);
+    transform: rotate(-12deg);
+}
+
+.poster-intro-ready .poster-photo-note {
+    animation: poster-stamp-in 900ms cubic-bezier(0.16, 1, 0.3, 1) 1320ms both;
+}
+
+.poster-hero-note {
+    box-shadow: 5px 5px 0 var(--color-poster-blue);
+    transform: rotate(2deg);
+    transition: box-shadow 240ms ease, transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.poster-intro-ready .poster-hero-note {
+    animation: poster-stamp-in 900ms cubic-bezier(0.16, 1, 0.3, 1) 1940ms both;
+}
+
+.poster-name-print > span:last-child {
+    color: var(--color-poster-green);
+    text-shadow:
+        4px 4px 0 var(--color-poster-yellow),
+        7px 7px 0 color-mix(in srgb, var(--color-poster-blue) 24%, transparent);
+}
+
+.poster-intro-ready .poster-name-print > span:last-child {
+    animation: poster-name-reveal 1150ms cubic-bezier(0.16, 1, 0.3, 1) 860ms both;
+}
+
+.poster-photo-sheet::before,
+.poster-project-sheet::before {
+    position: absolute;
+    z-index: 2;
+    width: 4.5rem;
+    height: 1.15rem;
+    border: 1px solid color-mix(in srgb, var(--color-poster-ink) 16%, transparent);
+    background: color-mix(in srgb, var(--color-poster-yellow) 88%, transparent);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--color-poster-ink) 12%, transparent);
+    content: '';
+    pointer-events: none;
+}
+
+.poster-photo-sheet::before {
+    top: -0.55rem;
+    left: 50%;
+    transform: translateX(-50%) rotate(-3deg);
+}
+
+.poster-photo-sheet {
+    transform: rotate(-2deg);
+    box-shadow: 8px 9px 0 var(--color-poster-blue);
+    transition: transform 280ms ease, box-shadow 280ms ease;
+}
+
+.poster-about-sheet {
+    position: relative;
+}
+
+.poster-about-sheet::after {
+    position: absolute;
+    right: -0.75rem;
+    bottom: 15%;
+    width: 2.2rem;
+    height: 4rem;
+    border: 2px solid var(--color-poster-ink);
+    background: var(--color-poster-blue);
+    box-shadow: 3px 3px 0 var(--color-poster-yellow);
+    content: '';
+    transform: rotate(7deg);
+}
+
+.poster-project-sheet {
+    position: relative;
+    transition: transform 320ms cubic-bezier(0.2, 0.75, 0.25, 1), box-shadow 320ms ease;
+}
+
+.poster-project-sheet::before {
+    top: -0.6rem;
+    right: 22%;
+    transform: rotate(2deg);
+}
+
+.poster-project-sheet::after {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 2.4rem;
+    height: 2.4rem;
+    background: linear-gradient(225deg, var(--color-poster-yellow) 0 49%, var(--color-poster-ink) 50% 52%, var(--color-poster-paper) 53%);
+    content: '';
+}
+
+.poster-project-sheet img {
+    transition: transform 450ms cubic-bezier(0.2, 0.75, 0.25, 1), filter 450ms ease;
+}
+
+.poster-education-slip {
+    position: relative;
+    transition: background-color 260ms ease, transform 420ms cubic-bezier(0.16, 1, 0.3, 1), padding-left 260ms ease;
+}
+
+.poster-education-slip:nth-child(odd) {
+    background-image: linear-gradient(90deg, color-mix(in srgb, var(--color-poster-yellow) 16%, transparent), transparent 72%);
+}
+
+.poster-skill-slip {
+    position: relative;
+    box-shadow: 4px 4px 0 color-mix(in srgb, var(--color-poster-ink) 14%, transparent);
+    transition: transform 420ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 320ms ease;
+}
+
+.poster-skill-mark {
+    border: 2px solid var(--color-poster-ink);
+    box-shadow: 3px 3px 0 var(--color-poster-yellow);
+    transform: rotate(-3deg);
+}
+
+.poster-skill-slip:nth-child(3n + 1) {
+    transform: rotate(-1deg);
+}
+
+.poster-skill-slip:nth-child(3n) {
+    transform: rotate(1deg);
+}
+
+.poster-certificate-slip {
+    position: relative;
+    background: var(--color-poster-paper);
+    box-shadow: 4px 4px 0 color-mix(in srgb, var(--color-poster-ink) 12%, transparent);
+}
+
+.poster-certificate-empty {
+    position: relative;
+    box-shadow: 7px 7px 0 var(--color-poster-blue);
+    transform: rotate(-0.5deg);
+}
+
+.poster-contact-paper {
+    position: relative;
+}
+
+.poster-contact-paper::before {
+    position: absolute;
+    top: -0.75rem;
+    left: 50%;
+    width: clamp(5rem, 12vw, 8rem);
+    height: 1.4rem;
+    border: 1px solid color-mix(in srgb, var(--color-poster-ink) 20%, transparent);
+    background: color-mix(in srgb, var(--color-poster-yellow) 90%, transparent);
+    content: '';
+    transform: translateX(-50%) rotate(-2deg);
+}
+
+.poster-reveal {
+    opacity: 0;
+    transform: translate3d(0, 4rem, 0) rotate(var(--poster-reveal-tilt, -5deg)) scale(0.9);
+    transition: opacity 900ms cubic-bezier(0.16, 1, 0.3, 1), transform 900ms cubic-bezier(0.16, 1, 0.3, 1);
+    transition-delay: var(--poster-reveal-delay, 0ms);
+}
+
+.poster-reveal.is-visible {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0) scale(1);
+}
+
+.poster-reveal.is-visible.poster-skill-slip:nth-child(3n + 1) {
+    transform: rotate(-1deg);
+}
+
+.poster-reveal.is-visible.poster-skill-slip:nth-child(3n) {
+    transform: rotate(1deg);
+}
+
+.poster-reveal.is-visible.poster-skill-slip:hover {
+    box-shadow: 7px 7px 0 var(--color-poster-yellow);
+    transform: translateY(-4px) rotate(0);
+}
+
+#skills {
+    /* Ruled lines identify this panel as a page from a working notebook. */
+    background-image: repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent 2.2rem,
+        color-mix(in srgb, var(--color-poster-ink) 6%, transparent) 2.2rem,
+        color-mix(in srgb, var(--color-poster-ink) 6%, transparent) calc(2.2rem + 1px)
+    );
+}
+
+.poster-certificate-empty a {
+    background: var(--color-poster-paper);
+}
+
+@media (hover: hover) {
+    .poster-hero-note:hover {
+        box-shadow: 7px 7px 0 var(--color-poster-blue);
+        transform: translateY(-3px) rotate(0);
+    }
+
+    .poster-photo-sheet:hover {
+        box-shadow: 12px 13px 0 var(--color-poster-blue);
+        transform: rotate(0deg) translateY(-3px);
+    }
+
+    .poster-education-slip:hover {
+        background-color: color-mix(in srgb, var(--color-poster-yellow) 14%, transparent);
+        padding-left: 0.65rem;
+        transform: rotate(-0.5deg);
+    }
+
+    .poster-skill-slip:hover {
+        box-shadow: 7px 7px 0 var(--color-poster-yellow);
+        transform: translateY(-6px) rotate(0);
+    }
+
+    .poster-project-sheet:hover,
+    .poster-project-sheet:focus-within {
+        box-shadow: 7px 7px 0 var(--color-poster-yellow);
+        transform: translateY(-6px) rotate(-0.4deg);
+    }
+
+    .poster-project-sheet:hover img {
+        filter: saturate(1.14) contrast(1.04);
+        transform: scale(1.035);
+    }
+}
+
+.poster-project-sheet:focus-within {
+    box-shadow: 7px 7px 0 var(--color-poster-yellow);
+    transform: translateY(-4px);
+}
+
+@media (max-width: 639px) {
+    .poster-book {
+        padding-left: 0.75rem;
+    }
+
+    .poster-book-header {
+        min-height: 4.75rem;
+        gap: 0.5rem;
+        padding-inline: 0.75rem;
+    }
+
+    .poster-brand-tab {
+        min-height: 4.25rem;
+        gap: 0.5rem;
+        padding-inline: 0.65rem;
+    }
+
+    .poster-book-binding {
+        top: 4.75rem;
+        width: 1.25rem;
+    }
+
+    .poster-book-clip {
+        width: 1.05rem;
+        height: 0.62rem;
+        margin-left: 0.1rem;
+    }
+
+    .poster-book-clip::before {
+        left: -0.3rem;
+        width: 0.52rem;
+    }
+
+    .poster-folio {
+        box-shadow: 6px 7px 0 color-mix(in srgb, var(--color-poster-shadow) 38%, transparent);
+    }
+
+    .poster-section-label {
+        max-width: calc(100vw - 7rem);
+        padding-inline: 0.65rem;
+        font-size: 0.58rem;
+    }
+
+    .poster-hero-copy {
+        padding-bottom: 0.5rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .poster-folio.poster-intro-ready,
+    .poster-intro-ready .poster-hero-art,
+    .poster-intro-ready .poster-hero-stage::before,
+    .poster-intro-ready .poster-hero-copy > *,
+    .poster-intro-ready .poster-hero-copy > .poster-status-stamp,
+    .poster-intro-ready .poster-photo-note,
+    .poster-intro-ready .poster-hero-note,
+    .poster-intro-ready .poster-name-print > span:last-child {
+        animation: none;
+        opacity: 1;
+    }
+
+    .poster-hero-art {
+        transform: rotate(-3deg) scale(1.04);
+        filter: drop-shadow(0 18px 14px color-mix(in srgb, var(--color-poster-ink) 18%, transparent));
+    }
+
+    .poster-status-stamp {
+        transform: rotate(-2deg);
+    }
+
+    .poster-reveal {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+
+    .poster-project-sheet,
+    .poster-photo-sheet,
+    .poster-skill-slip,
+    .poster-education-slip {
+        transition: none;
+    }
+}

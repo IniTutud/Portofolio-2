@@ -1,0 +1,42 @@
+# Environment and credentials
+/.env
+/.env.*
+!/.env.example
+/auth.json
+
+# Dependencies and generated frontend assets
+/node_modules
+/vendor
+/public/build
+/public/hot
+/public/storage
+/public/fonts-manifest.dev.json
+
+# Laravel generated files
+/bootstrap/cache/*.php
+/storage/*.key
+/storage/pail
+
+# Test and analysis output
+/.phpunit.result.cache
+/.phpunit.cache
+/.phpactor.json
+/_ide_helper.php
+/coverage
+
+# Local IDE and tool settings
+/.codex
+/.cursor/
+/.idea
+/.nova
+/.vscode
+/.zed
+/AGENTS.md
+/.claude
+
+# Local OS and framework files
+*.log
+.DS_Store
+Thumbs.db
+Homestead.json
+Homestead.yaml
