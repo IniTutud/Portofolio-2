@@ -1,0 +1,118 @@
+{
+    "profile": {
+        "name": "Fadhil",
+        "headline": "Student, Developer, 'petrolhead'?",
+        "about": "I am an 12th-grade student at SMKN 1 Surabaya majoring in Software Engineering. I have a strong interest in the field of Information Technology, especially in software development and programming.\nCurrently, I am actively developing my technical skills through hands-on projects and continuous learning. I am passionate about exploring innovative tech solutions and eager to contribute to real-world applications.",
+        "currently": "Student internship at: PT. Pranala Digital Transmaritim",
+        "hero_image": "S5oHgE8MCK5YX8GM8v38HcbeBPu6r0YQZJHEEJME-optimized.webp",
+        "about_image": "bAI1aQNATYGcpRLaksezi1rpbTwdWZD6DMLRr3jP-optimized.webp",
+        "logo_image": "20261001-120002-uXHS0jlf4bmb.png"
+    },
+    "social_links": {
+        "instagram": "https://www.instagram.com/initutud/",
+        "linkedin": "https://www.linkedin.com/in/fadhilnawwafabrar/",
+        "github": "https://github.com/IniTutud/"
+    },
+    "theme": {
+        "canvas": "#278d4e",
+        "paper": "#f4f0e5",
+        "paperAlt": "#f8f6ef",
+        "paperTint": "#e9e6d7",
+        "paperInput": "#fffdf6",
+        "ink": "#172331",
+        "copy": "#334247",
+        "copyAlt": "#344344",
+        "muted": "#53605b",
+        "green": "#176b49",
+        "greenDark": "#0b503b",
+        "blue": "#2052b5",
+        "blueDark": "#153f91",
+        "yellow": "#f0c33c",
+        "onAccent": "#ffffff",
+        "rule": "#c8c7c1",
+        "adminBackground": "#050506",
+        "adminPanel": "#15151c",
+        "adminPanelBorder": "#44444a",
+        "adminInput": "#0e0e12",
+        "adminInputBorder": "#505057",
+        "adminText": "#ffffff",
+        "adminMuted": "#dedee0",
+        "adminRule": "#393941",
+        "adminAccent": "#d8d9f3",
+        "adminAccentMuted": "#9498cc",
+        "successBg": "#e2eee3",
+        "successText": "#0b503b",
+        "dangerBg": "#f7e5d7",
+        "dangerText": "#8d2525",
+        "danger": "#991b1b",
+        "dangerLight": "#fecaca",
+        "shadow": "#043425"
+    },
+    "educations": [
+        {
+            "name": "SMK Negeri 1 Surabaya",
+            "period": "2024 till now",
+            "image": "jw5DsmLDoElMevXJGX1tyb4waDrYBT1qNJ10a8j7.png",
+            "url": "https://www.smkn1-sby.sch.id"
+        }
+    ],
+    "skills": [
+        {
+            "name": "HTML5",
+            "detail": "Struktur halaman web",
+            "mark": "</>"
+        },
+        {
+            "name": "CSS3",
+            "detail": "Tata visual dan layout",
+            "mark": "{ }"
+        },
+        {
+            "name": "Illustrator",
+            "detail": "Eksplorasi desain grafis",
+            "mark": "Ai"
+        },
+        {
+            "name": "Photoshop",
+            "detail": "Eksplorasi olah gambar",
+            "mark": "Ps"
+        },
+        {
+            "name": "Need for Speed",
+            "detail": "Game balap favorit",
+            "mark": null,
+            "image": "nfs.png"
+        },
+        {
+            "name": "Gran Turismo",
+            "detail": "Simulator balap favorit",
+            "mark": null,
+            "image": "gt.png"
+        }
+    ],
+    "certificates": [
+        {
+            "name": "Partisipan Pelatihan SIMETRI",
+            "issuer": "SISFOR ITS",
+            "issued_at": "2025",
+            "url": "https://drive.google.com/file/d/1txZoiv3doxhalNY6e54Cin1L_kjAPaYa/view?usp=drive_link",
+            "image": "sertifikat-simetri-page-0001-vFG6TddQT8G7.jpg"
+        },
+        {
+            "name": "Finalis Jatim Cybersecurity Competition 2025",
+            "issuer": "KOMINFO Jatim",
+            "issued_at": "2025",
+            "url": "https://drive.google.com/file/d/1hJ2dEQm1_irYZOb9_n8qzzMvpZkwAjOM/view?usp=drive_link",
+            "image": "sertifikat-finalis-jcc-2025-57-sign-page-0001-xRF3L0TsjFWV.jpg"
+        }
+    ],
+    "projects": [
+        {
+            "name": "Way Back Home",
+            "description": "Game indie berbasis Scratch 3 buatan K.O.N.Z. Ceritanya memadukan dunia fantasi, era dinosaurus, dan era magis.",
+            "image": "wbh12.png",
+            "url": "https://scratch.mit.edu/projects/1119146146",
+            "label": "Buka project di Scratch"
+        }
+    ]
+}

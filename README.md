@@ -65,6 +65,14 @@ composer run dev
 
 Buka alamat lokal yang ditampilkan oleh perintah tersebut.
 
+## Deploy versi statis ke Vercel
+
+Konfigurasi Vercel membangun versi portofolio statis dari `index.html`. Konten yang tampil berasal dari [`resources/js/portfolio-content.json`](./resources/js/portfolio-content.json), dan gambar berasal dari `public/images/portfolio`.
+
+Hubungkan repository ini ke Vercel dan deploy dengan pengaturan build bawaan dari `vercel.json`. Versi statis tidak memakai database atau dashboard admin. Untuk mengubah konten, edit file JSON dan deploy ulang. Form kontak hanya menampilkan tautan media sosial karena versi statis tidak memiliki backend untuk mengirim pesan.
+
+Laravel tetap tersedia untuk menjalankan aplikasi lokal dengan API dan dashboard admin.
+
 ## Perintah pengembangan
 
 ```bash
@@ -74,5 +82,4 @@ php artisan test
 # Bangun aset frontend
 npm run build
 ```
-
 

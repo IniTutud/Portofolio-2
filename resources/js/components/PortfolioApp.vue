@@ -1,6 +1,14 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import Loading from './Loading.vue';
+import defaultPortfolioContent from '../portfolio-content.json';
+
+const props = defineProps({
+    staticContent: {
+        type: Object,
+        default: null,
+    },
+});
 
 const asset = (name) => `/images/portfolio/${name}`;
 
@@ -68,67 +76,11 @@ const socialAccounts = computed(() => [
     { label: 'GitHub', icon: 'github', url: portfolio.social_links?.github ?? '' },
 ].filter((social) => social.url.trim()));
 
-const fallbackSchools = [
-    {
-        name: 'SMK Negeri 1 Surabaya',
-        period: '2024 sampai sekarang',
-        image: 'smeas.png',
-        url: 'https://www.smkn1-sby.sch.id',
-    },
-    {
-        name: 'SMP Negeri 35 Surabaya',
-        period: '2021 sampai 2024',
-        image: 'gama.png',
-        url: 'https://profilsekolahdispendik.surabaya.go.id/umum/sekolah/detail_sekolah_enc?q=MjA1MzI1Nzc=',
-    },
-    {
-        name: 'SDN Penjaringan Sari 2 Surabaya',
-        period: '2015 sampai 2021',
-        image: 'pensada.png',
-        url: 'https://dapo.kemdikbud.go.id/sekolah/3616A543756AFAF140EF',
-    },
-];
-
-const fallbackSkills = [
-    { name: 'HTML5', detail: 'Struktur halaman web', mark: '</>' },
-    { name: 'CSS3', detail: 'Tata visual dan layout', mark: '{ }' },
-    { name: 'Illustrator', detail: 'Eksplorasi desain grafis', mark: 'Ai' },
-    { name: 'Photoshop', detail: 'Eksplorasi olah gambar', mark: 'Ps' },
-    { name: 'Need for Speed', detail: 'Game balap favorit', image: 'nfs.png' },
-    { name: 'Gran Turismo', detail: 'Simulator balap favorit', image: 'gt.png' },
-];
-
-const fallbackProjects = [
-    {
-        name: 'Way Back Home',
-        description: 'Game indie berbasis Scratch 3 buatan K.O.N.Z. Ceritanya memadukan dunia fantasi, era dinosaurus, dan era magis.',
-        image: 'wbh12.png',
-        url: 'https://scratch.mit.edu/projects/1119146146',
-        label: 'Buka project di Scratch',
-    },
-];
-
 const form = reactive({ name: '', email: '', message: '' });
-const portfolio = reactive({
-    profile: {
-        name: 'Fadhil',
-        headline: 'Pelajar, pembuat web, penggemar game',
-        about: 'Saya pelajar kelahiran 28 Oktober 2008 yang bersekolah di SMK Negeri 1 Surabaya, jurusan Rekayasa Perangkat Lunak. Saya suka menggabungkan ketertarikan pada game, desain, dan teknologi ke dalam tugas-tugas kecil yang bisa dipelajari lagi.',
-        currently: 'pelajar',
-        hero_image: 'hero_section.png',
-        about_image: 'pink1.png',
-        logo_image: '',
-    },
-    social_links: { instagram: '', linkedin: '', github: '' },
-    theme: { ...DEFAULT_THEME },
-    educations: fallbackSchools,
-    skills: fallbackSkills,
-    certificates: [],
-    projects: fallbackProjects,
-});
+const portfolio = reactive(defaultPortfolioContent);
 const formState = ref('idle');
 const formMessage = ref('');
-const portfolioState = ref('loading');
+const portfolioState = ref(props.staticContent ? 'loading' : 'ready');
 const portfolioError = ref('');
 const mobileMenuOpen = ref(false);
 const activeSection = ref('home');
@@ -174,22 +126,26 @@ const loadPortfolio = async () => {
     portfolioState.value = 'loading';
 
     try {
-        const response = await fetch('/api/portfolio', { headers: { Accept: 'application/json' } });
-        if (!response.ok) {
-            throw new Error('Konten CMS belum dapat dimuat.');
+        if (props.staticContent) {
+            Object.assign(portfolio, props.staticContent);
+        } else {
+            const response = await fetch('/api/portfolio', { headers: { Accept: 'application/json' } });
+            if (!response.ok) {
+                throw new Error('Konten portofolio belum dapat dimuat.');
+            }
+
+            Object.assign(portfolio, await response.json());
         }
 
-        const payload = await response.json();
-        Object.assign(portfolio, payload);
-        applyTheme(payload.theme ?? DEFAULT_THEME);
+        applyTheme(portfolio.theme ?? DEFAULT_THEME);
         await preloadPortfolioAssets();
         portfolioState.value = 'ready';
         await nextTick();
         revealPosterSections();
     } catch (error) {
         applyTheme(DEFAULT_THEME);
-        portfolioState.value = 'ready';
-        portfolioError.value = error instanceof Error ? error.message : 'Konten CMS belum dapat dimuat.';
+        portfolioState.value = 'error';
+        portfolioError.value = error instanceof Error ? error.message : 'Konten portofolio belum dapat dimuat.';
         await nextTick();
         revealPosterSections();
     }
@@ -374,7 +330,7 @@ onBeforeUnmount(() => {
                 <Loading v-if="portfolioState === 'loading'" />
             </Teleport>
             <div v-if="portfolioState === 'error'" class="flex flex-wrap items-center justify-between gap-4 border-b border-poster-rule bg-[#f7e5d7] px-4 py-3 text-sm text-poster-ink sm:px-8" role="alert">
-                <span>{{ portfolioError }} Informasi yang tampil mungkin belum mencerminkan perubahan terbaru.</span>
+                <span>{{ portfolioError }}</span>
                 <button type="button" class="min-h-11 border border-poster-ink px-3 font-bold text-poster-ink hover:bg-poster-ink hover:text-white" @click="loadPortfolio">Coba lagi</button>
             </div>
 
@@ -453,7 +409,7 @@ onBeforeUnmount(() => {
                 <section id="education" class="border-t border-poster-rule px-4 py-10 sm:px-8 sm:py-16 lg:px-16 lg:py-20">
                     <div class="mb-8 flex flex-col gap-2 sm:mb-10">
                         <div class="flex items-center gap-3">
-                            <a href="/admin" class="poster-admin-trigger focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-poster-blue" aria-label="Buka login dashboard">
+                            <a v-if="!staticContent" href="/admin" class="poster-admin-trigger focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-poster-blue" aria-label="Buka login dashboard">
                                 <span class="poster-section-number poster-section-number--blue" aria-hidden="true">02</span>
                             </a>
                             <span class="poster-section-label poster-section-label--blue">Education History</span>
@@ -594,11 +550,25 @@ onBeforeUnmount(() => {
                             <span class="text-xs font-black uppercase tracking-[0.1em] text-white">Let's Connect</span>
                         </div>
                         <h2 class="m-0 max-w-[18ch] break-words text-4xl font-black leading-[0.98] tracking-[-0.065em] text-white sm:text-6xl">Any message to share?</h2>
-                        <p class="mt-4 max-w-sm text-base leading-relaxed text-white">Send your questions or greetings through this form.</p>
-                        <span class="mt-8 inline-block border-t border-white/60 pt-3 text-[0.65rem] font-black tracking-[0.12em] text-white">DIRECT MESSAGE FROM THIS PAGE</span>
+                        <p class="mt-4 max-w-sm text-base leading-relaxed text-white">{{ staticContent ? 'Find me through these social accounts.' : 'Send your questions or greetings through this form.' }}</p>
+                        <span class="mt-8 inline-block border-t border-white/60 pt-3 text-[0.65rem] font-black tracking-[0.12em] text-white">{{ staticContent ? 'SOCIAL MEDIA' : 'DIRECT MESSAGE FROM THIS PAGE' }}</span>
                     </div>
 
-                    <form class="poster-contact-paper grid grid-cols-1 content-start gap-4 border-2 border-poster-ink bg-poster-paper p-4 shadow-[6px_6px_0_#f0c33c] sm:grid-cols-2 sm:p-8" @submit.prevent="submitContact">
+                    <div v-if="staticContent" class="poster-contact-paper grid content-start gap-5 border-2 border-poster-ink bg-poster-paper p-5 shadow-[6px_6px_0_#f0c33c] sm:p-8">
+                        <p class="m-0 text-base font-bold leading-relaxed text-poster-ink">Form kontak belum terhubung di situs statis ini. Kamu bisa menghubungi saya melalui akun berikut.</p>
+                        <ul v-if="socialAccounts.length" class="m-0 grid list-none gap-2 p-0">
+                            <li v-for="social in socialAccounts" :key="social.label">
+                                <a
+                                    :href="social.url"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="inline-flex min-h-11 items-center font-black text-poster-blue underline underline-offset-4 hover:text-poster-green-dark focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-poster-blue"
+                                >{{ social.label }}</a>
+                            </li>
+                        </ul>
+                        <p v-else class="m-0 text-sm leading-relaxed text-poster-muted">Belum ada akun media sosial yang ditambahkan.</p>
+                    </div>
+                    <form v-else class="poster-contact-paper grid grid-cols-1 content-start gap-4 border-2 border-poster-ink bg-poster-paper p-4 shadow-[6px_6px_0_#f0c33c] sm:grid-cols-2 sm:p-8" @submit.prevent="submitContact">
                         <label class="grid min-w-0 gap-2 text-sm font-black text-poster-ink">
                             <span>Nama</span>
                             <input v-model="form.name" name="name" type="text" autocomplete="name" required placeholder="Nama kamu" class="min-h-12 w-full border border-poster-ink/50 bg-white px-3 py-2 font-normal text-poster-ink placeholder:text-poster-muted focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-poster-blue" />
