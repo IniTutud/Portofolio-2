@@ -1,5 +1,8 @@
 <script setup>
-import { reactive, ref } from 'vue';
+import { onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import defaultPortfolioContent from '../portfolio-content.json';
+import { portfolioAsset } from '../portfolio-asset.js';
+import { getSupabase, supabaseConfigured } from '../supabase.js';
 
 const asset = (name) => `/images/portfolio/${name}`;
 const DEFAULT_THEME = {
@@ -57,92 +60,155 @@ const applyTheme = (theme = DEFAULT_THEME) => {
 };
 
 const loggedIn = ref(false);
+const checkingSession = ref(true);
 const loading = ref(false);
 const message = ref('');
 const error = ref('');
 const credentials = reactive({ email: '', password: '' });
-const content = reactive({
-    profile: { name: '', headline: '', about: '', currently: '', hero_image: '', about_image: '', logo_image: '' },
-    theme: { ...DEFAULT_THEME },
-    social_links: { instagram: '', linkedin: '', github: '' },
-    educations: [],
-    skills: [],
-    certificates: [],
-    projects: [],
-});
+const content = reactive(structuredClone(defaultPortfolioContent));
+let authSubscription;
+
+const imageExtensions = {
+    'image/gif': 'gif',
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+};
 
 const load = async () => {
-    const response = await fetch('/api/portfolio', { headers: { Accept: 'application/json' } });
-    const payload = await response.json();
-    Object.assign(content, payload);
+    const { data, error: loadError } = await getSupabase()
+        .from('portfolio_content')
+        .select('content')
+        .eq('id', 1)
+        .maybeSingle();
+
+    if (loadError) {
+        throw loadError;
+    }
+
+    if (data?.content) {
+        Object.assign(content, data.content);
+    }
+
     applyTheme(content.theme ?? DEFAULT_THEME);
 };
 
-const uploadImage = async (event, target, key) => {
-    const file = event.target.files?.[0];
+const verifyAdmin = async (userId) => {
+    const { data, error: adminError } = await getSupabase()
+        .from('portfolio_admins')
+        .select('user_id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+    if (adminError) {
+        throw adminError;
+    }
+
+    return Boolean(data);
+};
+
+const initializeSession = async () => {
+    try {
+        if (!supabaseConfigured) {
+            return;
+        }
+
+        const { data, error: sessionError } = await getSupabase().auth.getSession();
+
+        if (sessionError) {
+            throw sessionError;
+        }
+
+        if (!data.session) {
+            return;
+        }
+
+        if (!await verifyAdmin(data.session.user.id)) {
+            await getSupabase().auth.signOut();
+            return;
+        }
+
+        loggedIn.value = true;
+        await load();
+    } catch (exception) {
+        error.value = exception instanceof Error ? exception.message : 'Sesi admin tidak dapat diperiksa.';
+    } finally {
+        checkingSession.value = false;
+    }
+};
+
+onMounted(() => {
+    if (supabaseConfigured) {
+        const { data } = getSupabase().auth.onAuthStateChange((_event, session) => {
+            if (!session) {
+                loggedIn.value = false;
+            }
+        });
+        authSubscription = data.subscription;
+    }
+
+    initializeSession();
+});
+
+onBeforeUnmount(() => {
+    authSubscription?.unsubscribe();
+});
+
+const uploadImage = async (event, setImageUrl) => {
+    const input = event.target;
+    const file = input.files?.[0];
     if (!file) {
         return;
     }
 
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
-        loading.value = true;
-        const response = await fetch('/api/admin/upload', {
-            method: 'POST',
-            headers: { Accept: 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
-            body: formData,
-        });
-
-        const payload = await response.json();
-        if (!response.ok) {
-            throw new Error(payload.message || 'Upload foto gagal.');
+        const extension = imageExtensions[file.type];
+        if (!extension) {
+            throw new Error('Pilih file gambar JPG, PNG, WebP, atau GIF.');
         }
 
-        target[key] = payload.filename;
-        message.value = payload.message;
+        if (file.size > 10 * 1024 * 1024) {
+            throw new Error('Ukuran gambar maksimal 10 MB.');
+        }
+
+        loading.value = true;
+        error.value = '';
+        const objectPath = `uploads/${crypto.randomUUID()}.${extension}`;
+        const supabase = getSupabase();
+        const { error: uploadError } = await supabase.storage
+            .from('portfolio-media')
+            .upload(objectPath, file, {
+                cacheControl: '31536000',
+                contentType: file.type,
+                upsert: false,
+            });
+
+        if (uploadError) {
+            throw uploadError;
+        }
+
+        const { data } = supabase.storage.from('portfolio-media').getPublicUrl(objectPath);
+        setImageUrl(data.publicUrl);
+        message.value = 'Foto berhasil diunggah.';
     } catch (exception) {
-        error.value = exception.message;
+        error.value = exception instanceof Error ? exception.message : 'Upload foto gagal.';
     } finally {
         loading.value = false;
-        event.target.value = '';
+        input.value = '';
     }
 };
+
+const uploadProfileImage = (event, target, key) => uploadImage(event, (url) => {
+    target[key] = url;
+});
 
 const uploadArrayImage = async (event, collection, index) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-        loading.value = true;
-        const response = await fetch('/api/admin/upload', {
-            method: 'POST',
-            headers: { Accept: 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
-            body: formData,
-        });
-
-        const payload = await response.json();
-        if (!response.ok) {
-            throw new Error(payload.message || 'Upload foto gagal.');
-        }
-
-        content[collection][index].image = payload.filename;
-        message.value = payload.message;
-    } catch (exception) {
-        error.value = exception.message;
-    } finally {
-        loading.value = false;
-        event.target.value = '';
-    }
+    await uploadImage(event, (url) => {
+        content[collection][index].image = url;
+    });
 };
 
-const getPortfolioImage = (filename) => filename ? `/images/portfolio/${filename}` : '';
+const getPortfolioImage = (filename) => filename ? portfolioAsset(filename) : '';
 const imageInputClasses = 'h-12 w-full min-w-0 cursor-pointer overflow-hidden !rounded-none !border-2 !border-poster-ink !bg-poster-paper-input !p-1 !font-bold !text-poster-ink file:mr-3 file:min-h-10 file:cursor-pointer file:border-0 file:border-r-2 file:border-poster-ink file:bg-poster-yellow file:px-4 file:py-2.5 file:font-black file:text-poster-ink hover:file:bg-poster-blue hover:file:text-white focus-visible:!outline-3 focus-visible:!outline-offset-2 focus-visible:!outline-poster-blue';
 
 const setThemeColor = (key, value) => {
@@ -163,16 +229,21 @@ const login = async () => {
     loading.value = true;
     error.value = '';
     try {
-        const response = await fetch('/api/admin/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
-            body: JSON.stringify(credentials),
-        });
-        if (!response.ok) throw new Error((await response.json()).message || 'Login gagal.');
+        const { data, error: loginError } = await getSupabase().auth.signInWithPassword(credentials);
+
+        if (loginError) {
+            throw loginError;
+        }
+
+        if (!data.user || !await verifyAdmin(data.user.id)) {
+            await getSupabase().auth.signOut();
+            throw new Error('Akun ini belum diberi akses admin di Supabase.');
+        }
+
         loggedIn.value = true;
         await load();
     } catch (exception) {
-        error.value = exception.message;
+        error.value = exception instanceof Error ? exception.message : 'Login gagal.';
     } finally {
         loading.value = false;
     }
@@ -183,18 +254,21 @@ const save = async () => {
     message.value = '';
     error.value = '';
     try {
-        const response = await fetch('/api/admin/portfolio', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
-            body: JSON.stringify(content),
-        });
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.message || 'Portfolio belum tersimpan.');
-        Object.assign(content, payload);
-        applyTheme(content.theme ?? DEFAULT_THEME);
-        message.value = payload.message;
+        const { error: saveError } = await getSupabase()
+            .from('portfolio_content')
+            .upsert({
+                id: 1,
+                content: JSON.parse(JSON.stringify(content)),
+                updated_at: new Date().toISOString(),
+            });
+
+        if (saveError) {
+            throw saveError;
+        }
+
+        message.value = 'Portfolio berhasil disimpan ke Supabase.';
     } catch (exception) {
-        error.value = exception.message;
+        error.value = exception instanceof Error ? exception.message : 'Portfolio belum tersimpan.';
     } finally {
         loading.value = false;
     }
@@ -203,23 +277,37 @@ const save = async () => {
 const add = (key, value) => content[key].push({ ...value });
 const remove = (key, index) => content[key].splice(index, 1);
 const logout = async () => {
-    await fetch('/api/admin/logout', { method: 'POST', headers: { Accept: 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content } });
-    loggedIn.value = false;
+    try {
+        const { error: logoutError } = await getSupabase().auth.signOut();
+
+        if (logoutError) {
+            throw logoutError;
+        }
+
+        loggedIn.value = false;
+    } catch (exception) {
+        error.value = exception instanceof Error ? exception.message : 'Logout gagal.';
+    }
 };
 </script>
 
 <template>
     <div class="min-h-screen bg-poster-canvas p-3 text-poster-ink sm:p-6 lg:p-10">
-        <div v-if="!loggedIn" class="mx-auto flex min-h-[calc(100vh-6rem)] max-w-7xl items-center justify-center border-2 border-poster-ink bg-poster-paper p-4 shadow-[12px_12px_0_rgb(4_52_37_/_30%)] sm:p-8">
+        <div v-if="checkingSession" class="mx-auto flex min-h-[calc(100vh-6rem)] max-w-7xl items-center justify-center border-2 border-poster-ink bg-poster-paper p-4 shadow-[12px_12px_0_rgb(4_52_37_/_30%)] sm:p-8">
+            <p class="text-lg font-bold text-poster-ink">Memeriksa sesi admin...</p>
+        </div>
+
+        <div v-else-if="!loggedIn" class="mx-auto flex min-h-[calc(100vh-6rem)] max-w-7xl items-center justify-center border-2 border-poster-ink bg-poster-paper p-4 shadow-[12px_12px_0_rgb(4_52_37_/_30%)] sm:p-8">
             <form class="w-full max-w-md border-2 border-poster-ink bg-poster-paper p-6 sm:p-8" @submit.prevent="login">
                 <a href="/" class="inline-flex min-h-11 items-center text-sm font-bold text-poster-green-dark underline-offset-4 hover:underline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-poster-blue">Kembali ke portfolio</a>
                 <p class="mt-8 text-xs font-black uppercase tracking-[0.1em] text-poster-green-dark">Admin dashboard</p>
                 <h1 class="mt-3 text-5xl font-black leading-none tracking-[-0.06em] sm:text-6xl">Edit<br /><span class="text-poster-green">portfolio.</span></h1>
                 <div class="mt-8 grid gap-5">
+                    <p v-if="!supabaseConfigured" role="alert" class="text-sm font-bold text-red-800">Supabase belum dikonfigurasi. Isi URL project dan publishable key di environment Vercel.</p>
                     <label class="grid gap-2 text-sm font-bold text-poster-ink">Email<input v-model="credentials.email" type="email" required autocomplete="email" placeholder="email@contoh.com" class="min-h-12 rounded-none border border-poster-ink bg-poster-paper-input px-4 font-normal text-poster-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-poster-blue" /></label>
                     <label class="grid gap-2 text-sm font-bold text-poster-ink">Password<input v-model="credentials.password" type="password" required autocomplete="current-password" class="min-h-12 rounded-none border border-poster-ink bg-poster-paper-input px-4 font-normal text-poster-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-poster-blue" /></label>
                     <p v-if="error" role="alert" class="text-sm font-bold text-red-800">{{ error }}</p>
-                    <button class="min-h-12 border-2 border-poster-ink bg-poster-green px-5 font-black text-white hover:bg-poster-green-dark focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-poster-blue disabled:opacity-60" :disabled="loading">{{ loading ? 'Membuka dashboard...' : 'Masuk ke dashboard' }}</button>
+                    <button class="min-h-12 border-2 border-poster-ink bg-poster-green px-5 font-black text-white hover:bg-poster-green-dark focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-poster-blue disabled:opacity-60" :disabled="loading || !supabaseConfigured">{{ loading ? 'Membuka dashboard...' : 'Masuk ke dashboard' }}</button>
                 </div>
             </form>
         </div>
@@ -253,10 +341,10 @@ const logout = async () => {
             <section class="mb-6 border border-white/20 bg-poster-admin-panel p-5 sm:p-8 [&_input]:min-h-11 [&_input]:w-full [&_input]:rounded-lg [&_input]:border [&_input]:border-white/25 [&_input]:bg-black/35 [&_input]:px-3 [&_input]:py-2 [&_input]:font-normal [&_input]:text-white [&_label]:grid [&_label]:min-w-0 [&_label]:gap-2 [&_label]:text-sm [&_label]:font-bold [&_label]:text-white/80 [&_textarea]:w-full [&_textarea]:rounded-lg [&_textarea]:border [&_textarea]:border-white/25 [&_textarea]:bg-black/35 [&_textarea]:px-3 [&_textarea]:py-2 [&_textarea]:font-normal [&_textarea]:text-white [&_input]:focus-visible:outline-3 [&_input]:focus-visible:outline-offset-2 [&_input]:focus-visible:outline-lavender-light [&_textarea]:focus-visible:outline-3 [&_textarea]:focus-visible:outline-offset-2 [&_textarea]:focus-visible:outline-lavender-light">
                 <h2 class="text-2xl font-bold text-lavender-light">About me</h2>
                 <div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <label>Nama<input v-model="content.profile.name" required /></label><label>Headline<input v-model="content.profile.headline" required /></label><label>Sedang menjadi<input v-model="content.profile.currently" /></label><label>Archive photo (About section)<input type="file" accept="image/*" :class="imageInputClasses" @change="uploadImage($event, content.profile, 'hero_image')" /><img v-if="content.profile.hero_image" :src="getPortfolioImage(content.profile.hero_image)" alt="Preview archive photo" class="mt-3 h-24 w-24 rotate-[-2deg] border-[6px] border-poster-paper object-cover shadow-[3px_3px_0_var(--color-poster-yellow)] outline outline-1 outline-poster-ink" /><span v-if="content.profile.hero_image" class="mt-2 block text-xs text-poster-ink">{{ content.profile.hero_image }}</span></label><label>Main portrait (Hero section)<input type="file" accept="image/*" :class="imageInputClasses" @change="uploadImage($event, content.profile, 'about_image')" /><img v-if="content.profile.about_image" :src="getPortfolioImage(content.profile.about_image)" alt="Preview main portrait" class="mt-3 h-24 w-24 rotate-[2deg] border-[6px] border-poster-paper object-cover shadow-[3px_3px_0_var(--color-poster-yellow)] outline outline-1 outline-poster-ink" /><span v-if="content.profile.about_image" class="mt-2 block text-xs text-poster-ink">{{ content.profile.about_image }}</span></label>
+                    <label>Nama<input v-model="content.profile.name" required /></label><label>Headline<input v-model="content.profile.headline" required /></label><label>Sedang menjadi<input v-model="content.profile.currently" /></label><label>Archive photo (About section)<input type="file" accept="image/*" :class="imageInputClasses" @change="uploadProfileImage($event, content.profile, 'hero_image')" /><img v-if="content.profile.hero_image" :src="getPortfolioImage(content.profile.hero_image)" alt="Preview archive photo" class="mt-3 h-24 w-24 rotate-[-2deg] border-[6px] border-poster-paper object-cover shadow-[3px_3px_0_var(--color-poster-yellow)] outline outline-1 outline-poster-ink" /><span v-if="content.profile.hero_image" class="mt-2 block text-xs text-poster-ink">{{ content.profile.hero_image }}</span></label><label>Main portrait (Hero section)<input type="file" accept="image/*" :class="imageInputClasses" @change="uploadProfileImage($event, content.profile, 'about_image')" /><img v-if="content.profile.about_image" :src="getPortfolioImage(content.profile.about_image)" alt="Preview main portrait" class="mt-3 h-24 w-24 rotate-[2deg] border-[6px] border-poster-paper object-cover shadow-[3px_3px_0_var(--color-poster-yellow)] outline outline-1 outline-poster-ink" /><span v-if="content.profile.about_image" class="mt-2 block text-xs text-poster-ink">{{ content.profile.about_image }}</span></label>
                     <div class="grid min-w-0 gap-2">
                         <label for="logo-image-upload">Foto tab logo</label>
-                        <input id="logo-image-upload" type="file" accept="image/*" :class="imageInputClasses" @change="uploadImage($event, content.profile, 'logo_image')" />
+                        <input id="logo-image-upload" type="file" accept="image/*" :class="imageInputClasses" @change="uploadProfileImage($event, content.profile, 'logo_image')" />
                         <p class="text-xs font-normal text-poster-muted">Kalau belum diatur, foto utama akan dipakai.</p>
                         <img v-if="content.profile.logo_image || content.profile.about_image" :src="getPortfolioImage(content.profile.logo_image || content.profile.about_image)" alt="" class="mt-2 size-24 rotate-[-2deg] border-[6px] border-poster-paper object-cover shadow-[3px_3px_0_var(--color-poster-yellow)] outline outline-1 outline-poster-ink" />
                         <span class="break-all text-xs font-normal text-white/80">{{ content.profile.logo_image || 'Menggunakan foto utama' }}</span>

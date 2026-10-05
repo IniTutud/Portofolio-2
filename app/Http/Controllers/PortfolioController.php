@@ -9,8 +9,10 @@ use App\Models\Project;
 use App\Models\Skill;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use RuntimeException;
 
 class PortfolioController extends Controller
 {
@@ -23,48 +25,46 @@ class PortfolioController extends Controller
     {
         abort_unless($request->user()?->is_admin, 403, 'Akses admin diperlukan.');
 
-        $file = $request->file('file');
+        $validated = $request->validate([
+            'file' => ['required', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:6144', 'dimensions:max_width=6000,max_height=6000'],
+        ]);
+        $file = $validated['file'];
 
-        if (!$file || !$file->isValid()) {
+        if (! $file instanceof UploadedFile || ! $file->isValid()) {
             return response()->json(['message' => 'File foto tidak valid.'], 422);
         }
 
-        if (!in_array($file->getClientMimeType(), ['image/jpeg', 'image/png', 'image/webp', 'image/gif'], true)) {
-            return response()->json(['message' => 'Format foto harus JPG, PNG, WebP, atau GIF.'], 422);
-        }
-
-        $destination = public_path('images/portfolio');
-        if (!is_dir($destination)) {
-            mkdir($destination, 0777, true);
-        }
-
-        $filename = $this->storeOptimizedImage($file, $destination);
+        $image = $this->storeOptimizedImage($file);
 
         return response()->json([
             'message' => 'Foto berhasil diunggah.',
-            'filename' => $filename,
-            'path' => "/images/portfolio/{$filename}",
+            'filename' => $image['filename'],
+            'url' => $image['url'],
+            'path' => $image['url'],
         ]);
     }
 
-    private function storeOptimizedImage(\Illuminate\Http\UploadedFile $file, string $destination): string
+    /**
+     * @return array{filename: string, url: string}
+     */
+    private function storeOptimizedImage(UploadedFile $file): array
     {
-        $mimeType = $file->getClientMimeType();
+        $mimeType = $file->getMimeType();
         $format = match ($mimeType) {
             'image/png' => 'png',
-            'image/webp' => 'webp',
+            'image/webp' => function_exists('imagewebp') ? 'webp' : 'jpg',
             'image/gif' => 'jpg',
             default => 'jpg',
         };
 
-        $source = @file_get_contents($file->getRealPath());
+        $source = file_get_contents($file->getRealPath());
         if ($source === false) {
-            throw new \RuntimeException('Foto tidak dapat dibaca.');
+            throw new RuntimeException('Foto tidak dapat dibaca.');
         }
 
         $image = @imagecreatefromstring($source);
         if ($image === false) {
-            throw new \RuntimeException('Format foto tidak didukung untuk kompresi otomatis.');
+            throw new RuntimeException('Format foto tidak didukung untuk kompresi otomatis.');
         }
 
         $originalWidth = imagesx($image);
@@ -75,29 +75,67 @@ class PortfolioController extends Controller
         $newHeight = max(1, (int) round($originalHeight * $scale));
 
         $resized = imagecreatetruecolor($newWidth, $newHeight);
+        if ($resized === false) {
+            imagedestroy($image);
+            throw new RuntimeException('Foto tidak dapat diproses.');
+        }
+
         imagealphablending($resized, false);
         imagesavealpha($resized, true);
         $transparent = imagecolorallocatealpha($resized, 255, 255, 255, 127);
         imagefilledrectangle($resized, 0, 0, $newWidth, $newHeight, $transparent);
         imagecopyresampled($resized, $image, 0, 0, 0, 0, $newWidth, $newHeight, $originalWidth, $originalHeight);
 
-        $baseName = Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME) ?: 'portfolio-image');
+        $baseName = substr(Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME) ?: 'portfolio-image'), 0, 120);
         $filename = sprintf('%s-%s.%s', $baseName, Str::random(12), $format);
-        $outputPath = $destination . DIRECTORY_SEPARATOR . $filename;
+        $temporaryPath = tempnam(sys_get_temp_dir(), 'portfolio-');
 
-        if ($format === 'png') {
-            imagepng($resized, $outputPath, 8);
-        } elseif ($format === 'webp' && function_exists('imagewebp')) {
-            imagewebp($resized, $outputPath, 72);
-        } else {
-            imageinterlace($resized, false);
-            imagejpeg($resized, $outputPath, 72);
+        if ($temporaryPath === false) {
+            imagedestroy($image);
+            imagedestroy($resized);
+            throw new RuntimeException('Temporary image file could not be created.');
         }
 
-        imagedestroy($image);
-        imagedestroy($resized);
+        try {
+            $written = match ($format) {
+                'png' => imagepng($resized, $temporaryPath, 8),
+                'webp' => imagewebp($resized, $temporaryPath, 72),
+                default => imagejpeg($resized, $temporaryPath, 72),
+            };
 
-        return $filename;
+            if (! $written) {
+                throw new RuntimeException('Optimized image could not be written.');
+            }
+
+            $contents = file_get_contents($temporaryPath);
+
+            if ($contents === false) {
+                throw new RuntimeException('Optimized image could not be read.');
+            }
+        } finally {
+            imagedestroy($image);
+            imagedestroy($resized);
+            unlink($temporaryPath);
+        }
+
+        $url = $this->storeImageLocally($filename, $contents);
+
+        return ['filename' => $filename, 'url' => $url];
+    }
+
+    private function storeImageLocally(string $filename, string $contents): string
+    {
+        $destination = public_path('images/portfolio');
+
+        if (! is_dir($destination) && ! mkdir($destination, 0755, true) && ! is_dir($destination)) {
+            throw new RuntimeException('Portfolio image directory could not be created.');
+        }
+
+        if (file_put_contents($destination.DIRECTORY_SEPARATOR.$filename, $contents, LOCK_EX) === false) {
+            throw new RuntimeException('Portfolio image could not be stored locally.');
+        }
+
+        return "/images/portfolio/{$filename}";
     }
 
     public function update(Request $request): JsonResponse

@@ -15,7 +15,7 @@ Portofolio personal untuk menampilkan profil, pendidikan, keahlian, sertifikat, 
 
 ## Tentang proyek
 
-Website satu halaman ini dibuat dengan Laravel dan Vue. Pengunjung dapat melihat informasi portofolio dan mengirim pesan melalui formulir kontak. Panel admin digunakan untuk mengelola konten, foto, tautan media sosial, dan warna tampilan.
+Website portofolio satu halaman ini dibuat dengan Vue. Situs publik dan dashboard CMS di-host di Vercel, sementara Supabase menangani login admin, penyimpanan data portofolio, dan file gambar.
 
 > Formulir kontak saat ini hanya menampilkan konfirmasi demo. Aplikasi belum mengirim email.
 
@@ -32,54 +32,58 @@ Website satu halaman ini dibuat dengan Laravel dan Vue. Pengunjung dapat melihat
 
 | Teknologi | Kegunaan |
 | --- | --- |
-| [Laravel 13](https://laravel.com/) | Backend dan API |
 | [Vue 3](https://vuejs.org/) | Antarmuka interaktif |
 | [Tailwind CSS 4](https://tailwindcss.com/) | Styling |
 | [Vite 8](https://vite.dev/) | Build aset frontend |
-| [SQLite](https://www.sqlite.org/) | Database default lokal |
-| PHP 8.3 | Runtime backend |
+| [Supabase](https://supabase.com/) | Auth, PostgreSQL, dan Storage |
+| [Vercel](https://vercel.com/) | Hosting situs statis |
 
 ## Menjalankan secara lokal
 
 ### Persyaratan
 
-- PHP 8.3 atau lebih baru
-- Composer
 - Node.js dan npm
 
-### Instalasi
+### Supabase dan environment
 
-Jalankan dari direktori proyek:
+1. Buat project Supabase, lalu buka **Project Settings → API Keys**.
+2. Salin **Project URL** dan **Publishable key** ke `.env` lokal:
 
-```bash
-composer run setup
+```dotenv
+VITE_SUPABASE_URL=https://<project-ref>.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=<publishable-key>
 ```
 
-Perintah ini memasang dependensi, menyiapkan `.env`, membuat application key, menjalankan migrasi, memasang paket frontend, dan membangun aset.
+3. Jalankan seluruh isi [`supabase/setup.sql`](./supabase/setup.sql) lewat **SQL Editor → New query** di dashboard Supabase.
+4. Di Supabase, buka **Authentication → Users → Add user**, buat akun CMS dan pastikan alamat emailnya confirmed.
+5. Ambil UUID user tersebut, lalu jalankan query grant admin yang ada di bagian akhir `supabase/setup.sql`, dengan mengganti placeholder UUID sebelum query dijalankan.
+6. Jalankan `npm run dev`.
 
-### Menjalankan aplikasi
+Project URL dan publishable key memang digunakan di browser. **Jangan gunakan atau menaruh `service_role`/secret key di `.env` frontend atau Vercel.** Tabel dan bucket dilindungi Row Level Security.
 
-```bash
-composer run dev
+### Deploy ke Vercel
+
+1. Commit dan push perubahan ke GitHub.
+2. Di Vercel, import repository ini.
+3. Sebelum deploy, buka **Project Settings → Environment Variables** dan tambahkan:
+
+```text
+VITE_SUPABASE_URL=https://<project-ref>.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=<publishable-key>
 ```
 
-Buka alamat lokal yang ditampilkan oleh perintah tersebut.
+4. Pilih Production, dan Preview juga jika ingin menguji preview deployment.
+5. Deploy dengan build command `npm run build:vercel` dan output directory `dist`; pengaturan tersebut sudah ada di [`vercel.json`](./vercel.json).
+6. Buka `/admin`, login menggunakan akun Auth yang diberi akses admin, lalu klik **Simpan perubahan** satu kali. Ini menulis konten awal portofolio dari file JSON ke Supabase. Perubahan sesudahnya disimpan lewat tombol yang sama.
 
-## Deploy versi statis ke Vercel
-
-Konfigurasi Vercel membangun versi portofolio statis dari `index.html`. Konten yang tampil berasal dari [`resources/js/portfolio-content.json`](./resources/js/portfolio-content.json), dan gambar berasal dari `public/images/portfolio`.
-
-Hubungkan repository ini ke Vercel dan deploy dengan pengaturan build bawaan dari `vercel.json`. Versi statis tidak memakai database atau dashboard admin. Untuk mengubah konten, edit file JSON dan deploy ulang. Form kontak hanya menampilkan tautan media sosial karena versi statis tidak memiliki backend untuk mengirim pesan.
-
-Laravel tetap tersedia untuk menjalankan aplikasi lokal dengan API dan dashboard admin.
+CMS menyimpan satu dokumen JSON berisi profil, pendidikan, keahlian, sertifikat, proyek, tautan sosial, dan tema pada tabel `portfolio_content`. Foto yang diunggah disimpan sebagai objek di bucket publik `portfolio-media`, lalu URL-nya disimpan di dokumen tersebut.
 
 ## Perintah pengembangan
 
 ```bash
-# Jalankan pengujian
+# Jalankan pengujian Laravel lokal, jika memakai bagian Laravel proyek
 php artisan test
 
-# Bangun aset frontend
-npm run build
+# Bangun situs untuk Vercel
+npm run build:vercel
 ```
-
