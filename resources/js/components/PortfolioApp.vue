@@ -638,7 +638,7 @@ onBeforeUnmount(() => {
                             </div>
                             <h2
                                 class="m-0 max-w-[18ch] break-words border-b border-white/60 pb-3 text-4xl font-black leading-[0.98] tracking-[-0.065em] text-white sm:text-6xl">
-                                Send your questions or greetings through this form.</h2>
+                                Let's Connect haha (pls baddie dm me).</h2>
                         </div>
 
                         <div
