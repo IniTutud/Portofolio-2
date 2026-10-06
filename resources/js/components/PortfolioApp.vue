@@ -65,13 +65,35 @@ const navItems = [
     { label: 'Kontak', href: '#contact' },
 ];
 
+const toArray = (value) => Array.isArray(value) ? value : [];
+
 const socialAccounts = computed(() => [
     { label: 'Instagram', icon: 'instagram', url: portfolio.social_links?.instagram ?? '' },
     { label: 'LinkedIn', icon: 'linkedin', url: portfolio.social_links?.linkedin ?? '' },
     { label: 'GitHub', icon: 'github', url: portfolio.social_links?.github ?? '' },
 ].filter((social) => social.url.trim()));
 
-const portfolio = reactive(structuredClone(defaultPortfolioContent));
+const portfolio = reactive({
+    ...structuredClone(defaultPortfolioContent),
+    social_links: { ...(structuredClone(defaultPortfolioContent).social_links ?? {}) },
+    educations: toArray(structuredClone(defaultPortfolioContent).educations),
+    skills: toArray(structuredClone(defaultPortfolioContent).skills),
+    certificates: toArray(structuredClone(defaultPortfolioContent).certificates),
+    projects: toArray(structuredClone(defaultPortfolioContent).projects),
+});
+
+const normalizePortfolioContent = (content = {}) => {
+    const normalized = { ...content };
+
+    normalized.social_links = normalized.social_links ?? {};
+    normalized.educations = toArray(normalized.educations);
+    normalized.skills = toArray(normalized.skills);
+    normalized.certificates = toArray(normalized.certificates);
+    normalized.projects = toArray(normalized.projects);
+
+    Object.assign(portfolio, normalized);
+};
+
 const portfolioState = ref('loading');
 const portfolioError = ref('');
 const portfolioNotice = ref('');
@@ -87,9 +109,9 @@ const mobileMenuOpen = ref(false);
 const activeSection = ref('home');
 let posterRevealObserver;
 
-const schools = computed(() => portfolio.educations);
-const skills = computed(() => portfolio.skills);
-const projects = computed(() => portfolio.projects);
+const schools = computed(() => toArray(portfolio.educations));
+const skills = computed(() => toArray(portfolio.skills));
+const projects = computed(() => toArray(portfolio.projects));
 const initials = computed(() => (
     portfolio.profile.name
         .trim()
@@ -135,7 +157,7 @@ const loadPortfolio = async () => {
         }
 
         if (data?.content) {
-            Object.assign(portfolio, data.content);
+            normalizePortfolioContent(data.content);
         } else {
             portfolioNotice.value = 'Konten awal masih ditampilkan. Masuk ke dashboard dan simpan agar tersimpan di Supabase.';
         }
@@ -177,8 +199,8 @@ const submitContact = async () => {
         });
         const result = await response.json();
 
-        if (response.status === 422 && result.errors) {
-            contactErrors.value = result.errors;
+        if (response.status === 422 && result?.errors) {
+            contactErrors.value = result.errors ?? {};
             contactState.value = 'error';
             contactFeedback.value = 'Periksa kembali data yang kamu isi.';
 
@@ -366,7 +388,7 @@ onBeforeUnmount(() => {
                                 <span class="mb-2 text-2xl tracking-[-0.045em] sm:text-3xl lg:text-4xl">Hi, I'm</span>
                                 <span
                                     class="break-words text-[clamp(4rem,12vw,6rem)] text-poster-green md:text-[clamp(4.5rem,7vw,7rem)]">{{
-                                    portfolio.profile.name }}</span>
+                                        portfolio.profile.name }}</span>
                             </h1>
                             <p class="poster-copy-line mt-6 max-w-md text-lg font-bold leading-relaxed text-[#334247]">
                                 {{ portfolio.profile.headline }}</p>
@@ -374,7 +396,7 @@ onBeforeUnmount(() => {
                                 class="poster-status-stamp poster-copy-line mt-5 inline-flex items-center gap-2 text-sm text-poster-ink">
                                 <span class="size-2 rounded-full bg-poster-blue" aria-hidden="true"></span>
                                 <span>career status: <strong class="text-poster-ink">{{ portfolio.profile.currently ||
-                                        'a student' }}</strong></span>
+                                    'a student' }}</strong></span>
                             </div>
                             <div class="poster-copy-line mt-8 flex flex-wrap items-center gap-4">
                                 <a href="#project"
@@ -452,7 +474,7 @@ onBeforeUnmount(() => {
                             <article v-for="(school, index) in schools" :key="school.id || school.name"
                                 class="poster-education-slip grid grid-cols-[1.7rem_2.5rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2 py-5 sm:grid-cols-[2rem_3.5rem_minmax(0,1fr)] sm:gap-x-5 sm:py-6">
                                 <span class="text-xs font-black text-poster-blue">{{ String(index + 1).padStart(2, '0')
-                                    }}</span>
+                                }}</span>
                                 <img v-if="school.image" :src="asset(school.image)" :alt="`Logo ${school.name}`"
                                     class="size-10 object-contain sm:size-14" loading="lazy" />
                                 <div class="min-w-0">
@@ -497,7 +519,7 @@ onBeforeUnmount(() => {
                                 </span>
                                 <span class="grid min-w-0 gap-1">
                                     <strong class="break-words text-sm leading-snug text-poster-ink">{{ skill.name
-                                        }}</strong>
+                                    }}</strong>
                                     <span v-if="skill.detail" class="text-xs leading-relaxed text-poster-muted">{{
                                         skill.detail }}</span>
                                 </span>
@@ -598,7 +620,7 @@ onBeforeUnmount(() => {
                                     </div>
                                     <a v-if="project.url" :href="project.url" target="_blank" rel="noreferrer"
                                         class="inline-flex min-h-12 items-center justify-center gap-2 border-2 border-poster-ink bg-poster-blue px-4 py-3 text-sm font-black text-white no-underline transition hover:-translate-y-0.5 hover:bg-[#153f91] hover:shadow-[3px_3px_0_#172331]">{{
-                                        project.label || 'Lihat proyek' }} <span aria-hidden="true">↗</span></a>
+                                            project.label || 'Lihat proyek' }} <span aria-hidden="true">↗</span></a>
                                 </div>
                             </article>
                         </div>
@@ -612,41 +634,24 @@ onBeforeUnmount(() => {
                         <div class="poster-contact-copy text-white">
                             <div class="mb-5 flex items-center gap-3">
                                 <span class="poster-section-number poster-section-number--yellow">06</span>
-                                <span class="text-xs font-black uppercase tracking-[0.1em] text-white">Kontak</span>
+                                <span class="text-xs font-black uppercase tracking-[0.1em] text-white">Let's Connect</span>
                             </div>
                             <h2
-                                class="m-0 max-w-[18ch] break-words text-4xl font-black leading-[0.98] tracking-[-0.065em] text-white sm:text-6xl">
-                                Ada yang ingin disampaikan?</h2>
-
-                            <span
-                                class="mt-8 inline-block border-t border-white/60 pt-3 text-[0.65rem] font-black tracking-[0.12em] text-white">
-                                MEDIA SOSIAL
-                            </span>
-                            <ul v-if="socialAccounts.length" class="mt-3 grid list-none gap-2 p-0">
-                                <li v-for="social in socialAccounts" :key="social.label">
-                                    <a :href="social.url" target="_blank" rel="noopener noreferrer"
-                                        class="inline-flex min-h-11 items-center font-black text-white underline underline-offset-4 hover:text-poster-yellow focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-white">
-                                        {{ social.label }}
-                                    </a>
-                                </li>
-                            </ul>
-                            <p v-else class="mt-3 text-sm leading-relaxed text-white">Belum ada akun media sosial
-                                yang ditambahkan.</p>
+                                class="m-0 max-w-[18ch] break-words border-b border-white/60 pb-3 text-4xl font-black leading-[0.98] tracking-[-0.065em] text-white sm:text-6xl">
+                                Send your questions or greetings through this form.</h2>
                         </div>
 
                         <div
                             class="poster-contact-paper grid content-start gap-5 border-2 border-poster-ink bg-poster-paper p-5 shadow-[6px_6px_0_#f0c33c] sm:p-8">
-                            <p class="m-0 text-base font-bold leading-relaxed text-poster-ink">Kirim pesan langsung
-                                lewat form ini.</p>
                             <form class="grid gap-4" @submit.prevent="submitContact">
                                 <div class="grid gap-2">
-                                    <label for="contact-name" class="text-sm font-black text-poster-ink">Nama</label>
+                                    <label for="contact-name" class="text-sm font-black text-poster-ink">Name</label>
                                     <input id="contact-name" v-model="contactForm.name" name="name" type="text"
                                         autocomplete="name" maxlength="120" required
                                         :aria-invalid="Boolean(contactErrors.name)"
                                         :aria-describedby="contactErrors.name ? 'contact-name-error' : undefined"
                                         class="min-h-12 w-full border-2 border-poster-ink bg-poster-paper-input px-3 py-2 text-base text-poster-ink placeholder:text-poster-muted focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-poster-blue"
-                                        placeholder="Nama kamu">
+                                        placeholder="Your name">
                                     <p v-if="contactErrors.name" id="contact-name-error"
                                         class="m-0 text-sm font-bold text-poster-danger" role="alert">
                                         {{ contactErrors.name[0] }}
@@ -668,13 +673,14 @@ onBeforeUnmount(() => {
                                 </div>
 
                                 <div class="grid gap-2">
-                                    <label for="contact-message" class="text-sm font-black text-poster-ink">Pesan</label>
+                                    <label for="contact-message"
+                                        class="text-sm font-black text-poster-ink">Message</label>
                                     <textarea id="contact-message" v-model="contactForm.message" name="message"
                                         maxlength="2000" rows="5" required
                                         :aria-invalid="Boolean(contactErrors.message)"
                                         :aria-describedby="contactErrors.message ? 'contact-message-error' : undefined"
                                         class="w-full resize-y border-2 border-poster-ink bg-poster-paper-input px-3 py-2 text-base leading-relaxed text-poster-ink placeholder:text-poster-muted focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-poster-blue"
-                                        placeholder="Tulis pesanmu di sini"></textarea>
+                                        placeholder="Write your message here"></textarea>
                                     <p v-if="contactErrors.message" id="contact-message-error"
                                         class="m-0 text-sm font-bold text-poster-danger" role="alert">
                                         {{ contactErrors.message[0] }}
@@ -689,7 +695,7 @@ onBeforeUnmount(() => {
 
                                 <button type="submit" :disabled="contactState === 'sending'"
                                     class="inline-flex min-h-12 w-full items-center justify-center border-2 border-poster-ink bg-poster-green px-4 py-3 text-base font-black text-white transition hover:bg-poster-green-dark focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-poster-blue disabled:cursor-wait disabled:opacity-70 sm:w-fit">
-                                    {{ contactState === 'sending' ? 'Mengirim pesan...' : 'Kirim pesan' }}
+                                    {{ contactState === 'sending' ? 'Sending message...' : 'Send message' }}
                                 </button>
                             </form>
                         </div>
@@ -704,18 +710,17 @@ onBeforeUnmount(() => {
                             <!-- Kolom 1: Profil / Brand -->
                             <div class="grid content-start gap-3 lg:col-span-5">
                                 <p class="m-0 text-xl font-bold tracking-tight text-poster-ink">
-                                    {{ portfolio.profile.name }}<span class="text-poster-green">.</span>
+                                    {{ portfolio.profile.name }}<span class="text-poster-green"></span>
                                 </p>
                                 <p class="m-0 max-w-sm text-sm leading-relaxed text-poster-copy/80">
-                                    Portofolio profesional. Terbuka untuk kolaborasi, diskusi proyek, atau sekadar
-                                    bertegur sapa.
+                                    Professional portfolio. Open to collaboration, project discussions, or just a quick greeting.
                                 </p>
                             </div>
 
                             <!-- Kolom 2: Media Sosial -->
                             <div class="grid content-start gap-3 lg:col-span-4">
                                 <h2 class="m-0 text-xs font-semibold uppercase tracking-wider text-poster-ink/70">
-                                    Media Sosial
+                                    Social Media
                                 </h2>
                                 <ul v-if="socialAccounts.length" class="m-0 flex flex-wrap gap-2 p-0 list-none">
                                     <li v-for="social in socialAccounts" :key="social.label">
@@ -742,23 +747,23 @@ onBeforeUnmount(() => {
                                         </a>
                                     </li>
                                 </ul>
-                                <p v-else class="m-0 text-sm text-poster-muted">Belum ada tautan media sosial.</p>
+                                <p v-else class="m-0 text-sm text-poster-muted">No social media links available.</p>
                             </div>
 
                             <!-- Kolom 3: Navigasi Cepat -->
                             <nav class="grid content-start gap-2 sm:justify-items-start lg:col-span-3 lg:justify-items-end"
                                 aria-label="Tautan halaman">
                                 <h2 class="m-0 text-xs font-semibold uppercase tracking-wider text-poster-ink/70">
-                                    Navigasi
+                                    Navigation
                                 </h2>
                                 <div class="flex flex-col gap-2 lg:items-end">
                                     <a href="#contact"
                                         class="text-sm font-medium text-poster-ink transition-colors hover:text-poster-blue focus-visible:outline-none focus-visible:underline">
-                                        Kirim Pesan
+                                        Send Message
                                     </a>
                                     <a href="#home"
                                         class="inline-flex items-center gap-1 text-sm font-medium text-poster-ink transition-colors hover:text-poster-blue focus-visible:outline-none focus-visible:underline">
-                                        <span>Kembali ke atas</span>
+                                        <span>Back to Top</span>
                                         <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2"
                                             viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round"
