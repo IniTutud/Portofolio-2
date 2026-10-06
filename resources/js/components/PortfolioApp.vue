@@ -75,6 +75,14 @@ const portfolio = reactive(structuredClone(defaultPortfolioContent));
 const portfolioState = ref('loading');
 const portfolioError = ref('');
 const portfolioNotice = ref('');
+const contactForm = reactive({
+    name: '',
+    email: '',
+    message: '',
+});
+const contactState = ref('idle');
+const contactFeedback = ref('');
+const contactErrors = ref({});
 const mobileMenuOpen = ref(false);
 const activeSection = ref('home');
 let posterRevealObserver;
@@ -151,6 +159,47 @@ const loadPortfolio = async () => {
 
 const closeMenu = () => {
     mobileMenuOpen.value = false;
+};
+
+const submitContact = async () => {
+    contactState.value = 'sending';
+    contactFeedback.value = '';
+    contactErrors.value = {};
+
+    try {
+        const response = await fetch('/contact', {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(contactForm),
+        });
+        const result = await response.json();
+
+        if (response.status === 422 && result.errors) {
+            contactErrors.value = result.errors;
+            contactState.value = 'error';
+            contactFeedback.value = 'Periksa kembali data yang kamu isi.';
+
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error(result.message || 'Pesan belum dapat dikirim. Silakan coba lagi.');
+        }
+
+        contactState.value = 'success';
+        contactFeedback.value = result.message;
+        contactForm.name = '';
+        contactForm.email = '';
+        contactForm.message = '';
+    } catch (error) {
+        contactState.value = 'error';
+        contactFeedback.value = error instanceof Error
+            ? error.message
+            : 'Pesan belum dapat dikirim. Silakan coba lagi.';
+    }
 };
 
 const setActiveSection = (id) => {
@@ -563,31 +612,86 @@ onBeforeUnmount(() => {
                         <div class="poster-contact-copy text-white">
                             <div class="mb-5 flex items-center gap-3">
                                 <span class="poster-section-number poster-section-number--yellow">06</span>
-                                <span class="text-xs font-black uppercase tracking-[0.1em] text-white">Let's
-                                    Connect</span>
+                                <span class="text-xs font-black uppercase tracking-[0.1em] text-white">Kontak</span>
                             </div>
                             <h2
                                 class="m-0 max-w-[18ch] break-words text-4xl font-black leading-[0.98] tracking-[-0.065em] text-white sm:text-6xl">
-                                Any message to share?</h2>
+                                Ada yang ingin disampaikan?</h2>
 
                             <span
                                 class="mt-8 inline-block border-t border-white/60 pt-3 text-[0.65rem] font-black tracking-[0.12em] text-white">
-                                SOCIAL MEDIA
+                                MEDIA SOSIAL
                             </span>
+                            <ul v-if="socialAccounts.length" class="mt-3 grid list-none gap-2 p-0">
+                                <li v-for="social in socialAccounts" :key="social.label">
+                                    <a :href="social.url" target="_blank" rel="noopener noreferrer"
+                                        class="inline-flex min-h-11 items-center font-black text-white underline underline-offset-4 hover:text-poster-yellow focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-white">
+                                        {{ social.label }}
+                                    </a>
+                                </li>
+                            </ul>
+                            <p v-else class="mt-3 text-sm leading-relaxed text-white">Belum ada akun media sosial
+                                yang ditambahkan.</p>
                         </div>
 
                         <div
                             class="poster-contact-paper grid content-start gap-5 border-2 border-poster-ink bg-poster-paper p-5 shadow-[6px_6px_0_#f0c33c] sm:p-8">
-                            <p class="m-0 text-base font-bold leading-relaxed text-poster-ink">Hubungi saya melalui akun berikut.</p>
-                            <ul v-if="socialAccounts.length" class="m-0 grid list-none gap-2 p-0">
-                                <li v-for="social in socialAccounts" :key="social.label">
-                                    <a :href="social.url" target="_blank" rel="noopener noreferrer"
-                                        class="inline-flex min-h-11 items-center font-black text-poster-blue underline underline-offset-4 hover:text-poster-green-dark focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-poster-blue">{{
-                                        social.label }}</a>
-                                </li>
-                            </ul>
-                            <p v-else class="m-0 text-sm leading-relaxed text-poster-muted">Belum ada akun media sosial
-                                yang ditambahkan.</p>
+                            <p class="m-0 text-base font-bold leading-relaxed text-poster-ink">Kirim pesan langsung
+                                lewat form ini.</p>
+                            <form class="grid gap-4" @submit.prevent="submitContact">
+                                <div class="grid gap-2">
+                                    <label for="contact-name" class="text-sm font-black text-poster-ink">Nama</label>
+                                    <input id="contact-name" v-model="contactForm.name" name="name" type="text"
+                                        autocomplete="name" maxlength="120" required
+                                        :aria-invalid="Boolean(contactErrors.name)"
+                                        :aria-describedby="contactErrors.name ? 'contact-name-error' : undefined"
+                                        class="min-h-12 w-full border-2 border-poster-ink bg-poster-paper-input px-3 py-2 text-base text-poster-ink placeholder:text-poster-muted focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-poster-blue"
+                                        placeholder="Nama kamu">
+                                    <p v-if="contactErrors.name" id="contact-name-error"
+                                        class="m-0 text-sm font-bold text-poster-danger" role="alert">
+                                        {{ contactErrors.name[0] }}
+                                    </p>
+                                </div>
+
+                                <div class="grid gap-2">
+                                    <label for="contact-email" class="text-sm font-black text-poster-ink">Email</label>
+                                    <input id="contact-email" v-model="contactForm.email" name="email" type="email"
+                                        autocomplete="email" maxlength="180" required
+                                        :aria-invalid="Boolean(contactErrors.email)"
+                                        :aria-describedby="contactErrors.email ? 'contact-email-error' : undefined"
+                                        class="min-h-12 w-full border-2 border-poster-ink bg-poster-paper-input px-3 py-2 text-base text-poster-ink placeholder:text-poster-muted focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-poster-blue"
+                                        placeholder="email@example.com">
+                                    <p v-if="contactErrors.email" id="contact-email-error"
+                                        class="m-0 text-sm font-bold text-poster-danger" role="alert">
+                                        {{ contactErrors.email[0] }}
+                                    </p>
+                                </div>
+
+                                <div class="grid gap-2">
+                                    <label for="contact-message" class="text-sm font-black text-poster-ink">Pesan</label>
+                                    <textarea id="contact-message" v-model="contactForm.message" name="message"
+                                        maxlength="2000" rows="5" required
+                                        :aria-invalid="Boolean(contactErrors.message)"
+                                        :aria-describedby="contactErrors.message ? 'contact-message-error' : undefined"
+                                        class="w-full resize-y border-2 border-poster-ink bg-poster-paper-input px-3 py-2 text-base leading-relaxed text-poster-ink placeholder:text-poster-muted focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-poster-blue"
+                                        placeholder="Tulis pesanmu di sini"></textarea>
+                                    <p v-if="contactErrors.message" id="contact-message-error"
+                                        class="m-0 text-sm font-bold text-poster-danger" role="alert">
+                                        {{ contactErrors.message[0] }}
+                                    </p>
+                                </div>
+
+                                <p v-if="contactFeedback" class="m-0 text-sm font-bold leading-relaxed"
+                                    :class="contactState === 'success' ? 'text-poster-green-dark' : 'text-poster-danger'"
+                                    :role="contactState === 'success' ? 'status' : 'alert'">
+                                    {{ contactFeedback }}
+                                </p>
+
+                                <button type="submit" :disabled="contactState === 'sending'"
+                                    class="inline-flex min-h-12 w-full items-center justify-center border-2 border-poster-ink bg-poster-green px-4 py-3 text-base font-black text-white transition hover:bg-poster-green-dark focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-poster-blue disabled:cursor-wait disabled:opacity-70 sm:w-fit">
+                                    {{ contactState === 'sending' ? 'Mengirim pesan...' : 'Kirim pesan' }}
+                                </button>
+                            </form>
                         </div>
                     </section>
                 </main>

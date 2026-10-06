@@ -4,6 +4,10 @@
     "outputDirectory": "dist",
     "rewrites": [
         {
+            "source": "/contact",
+            "destination": "/api/contact"
+        },
+        {
             "source": "/admin",
             "destination": "/index.html"
         },

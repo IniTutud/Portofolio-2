@@ -17,7 +17,7 @@ Portofolio personal untuk menampilkan profil, pendidikan, keahlian, sertifikat, 
 
 Website portofolio satu halaman ini dibuat dengan Vue. Situs publik dan dashboard CMS di-host di Vercel, sementara Supabase menangani login admin, penyimpanan data portofolio, dan file gambar.
 
-> Formulir kontak saat ini hanya menampilkan konfirmasi demo. Aplikasi belum mengirim email.
+Formulir kontak mengirim pesan ke channel Discord melalui webhook. Bagian Laravel melayani pengiriman saat dijalankan lokal, sedangkan deployment situs statis di Vercel menggunakan Vercel Function.
 
 ## Fitur
 
@@ -60,6 +60,17 @@ VITE_SUPABASE_PUBLISHABLE_KEY=<publishable-key>
 6. Jalankan `npm run dev`.
 
 Project URL dan publishable key memang digunakan di browser. **Jangan gunakan atau menaruh `service_role`/secret key di `.env` frontend atau Vercel.** Tabel dan bucket dilindungi Row Level Security.
+
+### Menghubungkan form ke Discord
+
+1. Di server Discord, buka **Server Settings → Integrations → Webhooks**, buat webhook baru, pilih channel tujuan, lalu salin URL webhook.
+2. Karena URL webhook sebelumnya pernah dibagikan di chat, hapus webhook lama dan buat yang baru. Jangan kirim atau commit URL pengganti.
+3. Simpan URL baru sebagai `DISCORD_WEBHOOK_URL`:
+   - **Vercel:** buka **Project Settings → Environment Variables**, tambahkan secret untuk Production dan Preview, lalu redeploy.
+   - **Laravel lokal:** isi `DISCORD_WEBHOOK_URL` di `.env`.
+4. Kirim pesan uji dari form. Pesan akan muncul di channel yang dipilih untuk webhook.
+
+Form menampilkan error jika webhook belum dikonfigurasi atau Discord menolak pengiriman. Endpoint Laravel membatasi request hingga lima kali per menit. Untuk situs Vercel, tambahkan rule rate limit di **Firewall → Rate Limiting** untuk path `/contact`, misalnya lima request per menit per IP. URL webhook hanya dibaca server dan tidak masuk ke bundle browser.
 
 ### Deploy ke Vercel
 
