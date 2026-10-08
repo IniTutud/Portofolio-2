@@ -1,9 +1,14 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { SplitText } from 'gsap/SplitText';
 import Loading from './Loading.vue';
 import defaultPortfolioContent from '../portfolio-content.json';
 import { portfolioAsset } from '../portfolio-asset.js';
 import { getSupabase, supabaseConfigured } from '../supabase.js';
+
+gsap.registerPlugin(ScrollTrigger, SplitText);
 
 const asset = portfolioAsset;
 
@@ -107,7 +112,7 @@ const contactFeedback = ref('');
 const contactErrors = ref({});
 const mobileMenuOpen = ref(false);
 const activeSection = ref('home');
-let posterRevealObserver;
+let portfolioMotionContext;
 
 const schools = computed(() => toArray(portfolio.educations));
 const skills = computed(() => toArray(portfolio.skills));
@@ -166,7 +171,7 @@ const loadPortfolio = async () => {
         await preloadPortfolioAssets();
         portfolioState.value = 'ready';
         await nextTick();
-        revealPosterSections();
+        animatePortfolio();
     } catch (error) {
         portfolioState.value = 'error';
         portfolioError.value = !supabaseConfigured
@@ -175,7 +180,7 @@ const loadPortfolio = async () => {
                 ? error.message
                 : 'Konten portofolio belum dapat dimuat.';
         await nextTick();
-        revealPosterSections();
+        animatePortfolio();
     }
 };
 
@@ -239,46 +244,628 @@ const handleScroll = () => {
     });
 };
 
-const revealPosterSections = () => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) {
+const animatePortfolio = () => {
+    portfolioMotionContext?.revert();
+
+    const folio = document.querySelector('.poster-folio');
+
+    if (!folio || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         return;
     }
 
-    posterRevealObserver?.disconnect();
+    portfolioMotionContext = gsap.context(() => {
+        // ═══════════════════════════════════════════════════════════════
+        // ACT I — CINEMATIC HERO ENTRANCE
+        // The entire folio drops in like a poster being slapped onto a board,
+        // then the hero image and text cascade in with staggered drama.
+        // ═══════════════════════════════════════════════════════════════
 
-    const revealTargets = document.querySelectorAll([
-        '#about .poster-about-layout',
-        '#education .poster-education-slip',
-        '#skills > div',
-        '#skills .poster-skill-slip',
-        '#certificates .poster-certificate-empty',
-        '#certificates .poster-certificate-slip',
-        '#project .poster-project-sheet',
-        '#contact .poster-contact-copy',
-        '#contact .poster-contact-paper',
-    ].join(', '));
+        const master = gsap.timeline({ defaults: { ease: 'power4.out' } });
 
-    if (!revealTargets.length) {
-        return;
-    }
+        // 1. The folio itself — dramatic scale-in with slight rotation, like
+        //    a paper being pinned to a corkboard
+        master.fromTo(folio,
+            { autoAlpha: 0, scale: 0.92, y: 60, rotationX: 4 },
+            {
+                autoAlpha: 1,
+                scale: 1,
+                y: 0,
+                rotationX: 0,
+                duration: 1.1,
+                ease: 'expo.out',
+                onComplete: () => gsap.set(folio, { clearProps: 'opacity,transform,visibility' }),
+            },
+        );
 
-    revealTargets.forEach((target, index) => {
-        target.classList.add('poster-reveal');
-        target.style.setProperty('--poster-reveal-delay', `${(index % 5) * 90}ms`);
-        target.style.setProperty('--poster-reveal-tilt', index % 2 === 0 ? '-5deg' : '5deg');
-    });
+        // 2. Hero stage — slides in from the left with a paper-swish feel,
+        //    the ::before pseudo (paper bg) is revealed by the element itself
+        master.fromTo('.poster-hero-stage',
+            { autoAlpha: 0, x: -80, rotation: -5, scale: 0.88 },
+            {
+                autoAlpha: 1,
+                x: 0,
+                rotation: 0,
+                scale: 1,
+                duration: 1.2,
+                ease: 'back.out(1.4)',
+                onComplete: () => gsap.set('.poster-hero-stage', { clearProps: 'opacity,transform,visibility' }),
+            },
+            '-=0.6',
+        );
 
-    posterRevealObserver = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('is-visible');
-            } else {
-                entry.target.classList.remove('is-visible');
+        // 3. Hero art (profile image) — bouncy drop-in with overshoot rotation,
+        //    feels like a photo being tossed onto the desk
+        master.fromTo('.poster-hero-art',
+            { autoAlpha: 0, y: 120, rotation: 12, scale: 0.7 },
+            {
+                autoAlpha: 1,
+                y: 0,
+                rotation: -3,
+                scale: 1.04,
+                duration: 1.3,
+                ease: 'elastic.out(0.8, 0.4)',
+                onComplete: () => gsap.set('.poster-hero-art', { clearProps: 'opacity,transform,visibility' }),
+            },
+            '-=0.8',
+        );
+
+        // 4. Photo note badge — pops in with a stamping effect
+        master.fromTo('.poster-photo-note',
+            { autoAlpha: 0, scale: 0, rotation: -20 },
+            {
+                autoAlpha: 1,
+                scale: 1,
+                rotation: -3,
+                duration: 0.5,
+                ease: 'back.out(3)',
+                onComplete: () => gsap.set('.poster-photo-note', { clearProps: 'opacity,transform,visibility' }),
+            },
+            '-=0.5',
+        );
+
+        // 5. Hero copy lines — each line slides up with staggered timing
+        //    like text being typed onto a poster
+        const heroCopyLines = gsap.utils.toArray('.poster-hero-copy > .poster-copy-line');
+        if (heroCopyLines.length) {
+            master.fromTo(heroCopyLines,
+                { autoAlpha: 0, y: 40, x: -20 },
+                {
+                    autoAlpha: 1,
+                    y: 0,
+                    x: 0,
+                    duration: 0.7,
+                    stagger: { each: 0.1, from: 'start' },
+                    ease: 'power3.out',
+                    onComplete: () => gsap.set(heroCopyLines, { clearProps: 'opacity,transform,visibility' }),
+                },
+                '-=0.9',
+            );
+        }
+
+        // 6. Name — SplitText character-by-character reveal with clip-path wipe
+        const nameEl = folio.querySelector('.poster-name-print > span:last-child');
+        if (nameEl) {
+            const nameSplit = SplitText.create(nameEl, { type: 'chars', charsClass: 'poster-name-char' });
+            master.fromTo(nameSplit.chars,
+                { autoAlpha: 0, y: 50, rotationX: -90, scale: 0.6 },
+                {
+                    autoAlpha: 1,
+                    y: 0,
+                    rotationX: 0,
+                    scale: 1,
+                    duration: 0.6,
+                    stagger: { each: 0.04, from: 'start' },
+                    ease: 'back.out(1.7)',
+                    onComplete: () => {
+                        gsap.set(nameSplit.chars, { clearProps: 'opacity,transform,visibility' });
+                    },
+                },
+                '-=0.6',
+            );
+        }
+
+        // 7. "Hi, I'm" label — clip-path reveal from left
+        master.fromTo('.poster-name-print > span:first-child',
+            { clipPath: 'inset(0 100% 0 0)' },
+            {
+                clipPath: 'inset(0 0% 0 0)',
+                duration: 0.8,
+                ease: 'power2.out',
+                onComplete: () => gsap.set('.poster-name-print > span:first-child', { clearProps: 'clipPath' }),
+            },
+            '-=1.0',
+        );
+
+        // 8. Hero note (education card) — slides in from bottom-right with tilt
+        master.fromTo('.poster-hero-note',
+            { autoAlpha: 0, y: 50, x: 30, rotation: 8 },
+            {
+                autoAlpha: 1,
+                y: 0,
+                x: 0,
+                rotation: 2,
+                duration: 0.7,
+                ease: 'back.out(1.5)',
+                onComplete: () => gsap.set('.poster-hero-note', { clearProps: 'opacity,transform,visibility' }),
+            },
+            '-=0.4',
+        );
+
+        // 9. Margin note — fades in with vertical writing-mode slide
+        master.from('.poster-margin-note', {
+            autoAlpha: 0,
+            y: 30,
+            duration: 0.6,
+            ease: 'power2.out',
+            onComplete: () => gsap.set('.poster-margin-note', { clearProps: 'opacity,transform,visibility' }),
+        }, '-=0.3');
+
+        // ═══════════════════════════════════════════════════════════════
+        // ACT II — SCROLL-TRIGGERED SECTION REVEALS
+        // Each section has its own dramatic entrance choreography.
+        // ═══════════════════════════════════════════════════════════════
+
+        // ---------- ABOUT SECTION ----------
+        // The section title text gets a SplitText word-by-word reveal
+        const aboutTitle = folio.querySelector('#about h2');
+        if (aboutTitle) {
+            const aboutSplit = SplitText.create(aboutTitle, { type: 'words', mask: 'words' });
+            gsap.fromTo(aboutSplit.words,
+                { y: '100%' },
+                {
+                    y: '0%',
+                    duration: 0.8,
+                    stagger: { each: 0.04 },
+                    ease: 'power4.out',
+                    scrollTrigger: { trigger: aboutTitle, start: 'top 85%', once: true },
+                },
+            );
+        }
+
+        // About photo sheet — slides and rotates in like a photo being placed
+        const aboutSheet = folio.querySelector('.poster-about-sheet');
+        if (aboutSheet) {
+            gsap.fromTo(aboutSheet,
+                { autoAlpha: 0, x: -60, rotation: -8, scale: 0.85 },
+                {
+                    autoAlpha: 1,
+                    x: 0,
+                    rotation: -2,
+                    scale: 1,
+                    duration: 1,
+                    ease: 'elastic.out(0.6, 0.5)',
+                    scrollTrigger: { trigger: aboutSheet, start: 'top 85%', once: true },
+                    onComplete: () => gsap.set(aboutSheet, { clearProps: 'opacity,transform,visibility' }),
+                },
+            );
+        }
+
+        // About text block — slides in from right side
+        const aboutText = folio.querySelector('#about .max-w-2xl');
+        if (aboutText) {
+            gsap.fromTo(aboutText,
+                { autoAlpha: 0, x: 50, y: 20 },
+                {
+                    autoAlpha: 1,
+                    x: 0,
+                    y: 0,
+                    duration: 0.9,
+                    ease: 'power3.out',
+                    scrollTrigger: { trigger: aboutText, start: 'top 85%', once: true },
+                    onComplete: () => gsap.set(aboutText, { clearProps: 'opacity,transform,visibility' }),
+                },
+            );
+        }
+
+        // ---------- SECTION HEADERS (Number + Label badges) ----------
+        // All section badges stamp in with a pop
+        const sectionBadges = folio.querySelectorAll('.poster-section-number, .poster-section-label');
+        sectionBadges.forEach((badge) => {
+            gsap.fromTo(badge,
+                { autoAlpha: 0, scale: 0, rotation: gsap.utils.random(-15, 15) },
+                {
+                    autoAlpha: 1,
+                    scale: 1,
+                    rotation: badge.classList.contains('poster-section-label')
+                        ? (badge.classList.contains('poster-section-label--blue') ? 2 : -2)
+                        : 0,
+                    duration: 0.5,
+                    ease: 'back.out(2.5)',
+                    scrollTrigger: { trigger: badge, start: 'top 90%', once: true },
+                    onComplete: () => gsap.set(badge, { clearProps: 'opacity,transform,visibility' }),
+                },
+            );
+        });
+
+        // ---------- EDUCATION SECTION ----------
+        // Education title — dramatic word reveal
+        const eduTitle = folio.querySelector('#education h2');
+        if (eduTitle) {
+            const eduSplit = SplitText.create(eduTitle, { type: 'words', mask: 'words' });
+            gsap.fromTo(eduSplit.words,
+                { y: '100%' },
+                {
+                    y: '0%',
+                    duration: 0.7,
+                    stagger: 0.06,
+                    ease: 'power4.out',
+                    scrollTrigger: { trigger: eduTitle, start: 'top 85%', once: true },
+                },
+            );
+        }
+
+        // Education slips — slide in from alternating sides like shuffled papers
+        const eduSlips = folio.querySelectorAll('.poster-education-slip');
+        eduSlips.forEach((slip, index) => {
+            const fromLeft = index % 2 === 0;
+            gsap.fromTo(slip,
+                {
+                    autoAlpha: 0,
+                    x: fromLeft ? -60 : 60,
+                    y: 15,
+                    rotation: fromLeft ? -3 : 3,
+                },
+                {
+                    autoAlpha: 1,
+                    x: 0,
+                    y: 0,
+                    rotation: 0,
+                    duration: 0.8,
+                    ease: 'power3.out',
+                    scrollTrigger: { trigger: slip, start: 'top 88%', once: true },
+                    onComplete: () => gsap.set(slip, { clearProps: 'opacity,transform,visibility' }),
+                },
+            );
+        });
+
+        // ---------- SKILLS SECTION ----------
+        // Skills title — word-by-word mask reveal
+        const skillsTitle = folio.querySelector('#skills h2');
+        if (skillsTitle) {
+            const skillsSplit = SplitText.create(skillsTitle, { type: 'words', mask: 'words' });
+            gsap.fromTo(skillsSplit.words,
+                { y: '100%' },
+                {
+                    y: '0%',
+                    duration: 0.7,
+                    stagger: 0.05,
+                    ease: 'power4.out',
+                    scrollTrigger: { trigger: skillsTitle, start: 'top 85%', once: true },
+                },
+            );
+        }
+
+        // Skill slips — fan out like a deck of cards being dealt!
+        const skillSlips = folio.querySelectorAll('.poster-skill-slip');
+        if (skillSlips.length) {
+            ScrollTrigger.batch(skillSlips, {
+                start: 'top 90%',
+                once: true,
+                onEnter: (batch) => {
+                    gsap.fromTo(batch,
+                        {
+                            autoAlpha: 0,
+                            y: 50,
+                            rotation: (i) => gsap.utils.random(-6, 6),
+                            scale: 0.8,
+                        },
+                        {
+                            autoAlpha: 1,
+                            y: 0,
+                            rotation: (i, target) => {
+                                // Restore the CSS rotation classes
+                                const idx = Array.from(skillSlips).indexOf(target);
+                                if (idx % 3 === 0) return -1;
+                                if (idx % 3 === 2) return 1;
+                                return 0;
+                            },
+                            scale: 1,
+                            duration: 0.7,
+                            stagger: { each: 0.08, from: 'random' },
+                            ease: 'back.out(1.4)',
+                            overwrite: true,
+                            onComplete: () => gsap.set(batch, { clearProps: 'opacity,visibility' }),
+                        },
+                    );
+                },
+            });
+        }
+
+        // ---------- CERTIFICATES SECTION ----------
+        // Certificates title
+        const certTitle = folio.querySelector('#certificates h2');
+        if (certTitle) {
+            const certSplit = SplitText.create(certTitle, { type: 'words', mask: 'words' });
+            gsap.fromTo(certSplit.words,
+                { y: '100%' },
+                {
+                    y: '0%',
+                    duration: 0.7,
+                    stagger: 0.05,
+                    ease: 'power4.out',
+                    scrollTrigger: { trigger: certTitle, start: 'top 85%', once: true },
+                },
+            );
+        }
+
+        // Certificate slips — slide in with alternating x offsets
+        const certSlips = folio.querySelectorAll('.poster-certificate-slip');
+        if (certSlips.length) {
+            ScrollTrigger.batch(certSlips, {
+                start: 'top 88%',
+                once: true,
+                onEnter: (batch) => {
+                    gsap.fromTo(batch,
+                        { autoAlpha: 0, y: 40, x: (i) => (i % 2 === 0 ? -30 : 30), rotation: (i) => (i % 2 === 0 ? -2 : 2) },
+                        {
+                            autoAlpha: 1,
+                            y: 0,
+                            x: 0,
+                            rotation: 0,
+                            duration: 0.7,
+                            stagger: { each: 0.1, from: 'start' },
+                            ease: 'power3.out',
+                            overwrite: true,
+                            onComplete: () => gsap.set(batch, { clearProps: 'opacity,transform,visibility' }),
+                        },
+                    );
+                },
+            });
+        }
+
+        // Certificate empty state — bouncy appear
+        const certEmpty = folio.querySelector('.poster-certificate-empty');
+        if (certEmpty) {
+            gsap.fromTo(certEmpty,
+                { autoAlpha: 0, scale: 0.85, rotation: -3 },
+                {
+                    autoAlpha: 1,
+                    scale: 1,
+                    rotation: -0.5,
+                    duration: 0.8,
+                    ease: 'elastic.out(0.7, 0.5)',
+                    scrollTrigger: { trigger: certEmpty, start: 'top 88%', once: true },
+                    onComplete: () => gsap.set(certEmpty, { clearProps: 'opacity,transform,visibility' }),
+                },
+            );
+        }
+
+        // ---------- PROJECTS SECTION ----------
+        // Project title — dramatic entrance
+        const projTitle = folio.querySelector('#project h2');
+        if (projTitle) {
+            const projSplit = SplitText.create(projTitle, { type: 'words', mask: 'words' });
+            gsap.fromTo(projSplit.words,
+                { y: '100%' },
+                {
+                    y: '0%',
+                    duration: 0.7,
+                    stagger: 0.06,
+                    ease: 'power4.out',
+                    scrollTrigger: { trigger: projTitle, start: 'top 85%', once: true },
+                },
+            );
+        }
+
+        // Project sheets — each project unfolds like a paper being laid down
+        const projectSheets = folio.querySelectorAll('.poster-project-sheet');
+        projectSheets.forEach((sheet, index) => {
+            const tl = gsap.timeline({
+                scrollTrigger: { trigger: sheet, start: 'top 85%', once: true },
+            });
+
+            // The whole card
+            tl.fromTo(sheet,
+                {
+                    autoAlpha: 0,
+                    y: 70,
+                    rotationX: index % 2 === 0 ? -8 : 8,
+                    scale: 0.9,
+                    transformPerspective: 800,
+                },
+                {
+                    autoAlpha: 1,
+                    y: 0,
+                    rotationX: 0,
+                    scale: 1,
+                    duration: 1,
+                    ease: 'power3.out',
+                    onComplete: () => gsap.set(sheet, { clearProps: 'opacity,transform,visibility,perspective' }),
+                },
+            );
+
+            // The image inside scales up slightly
+            const img = sheet.querySelector('img');
+            if (img) {
+                tl.fromTo(img,
+                    { scale: 1.15, autoAlpha: 0.7 },
+                    {
+                        scale: 1,
+                        autoAlpha: 1,
+                        duration: 0.9,
+                        ease: 'power2.out',
+                        onComplete: () => gsap.set(img, { clearProps: 'opacity,transform,visibility' }),
+                    },
+                    '-=0.7',
+                );
+            }
+
+            // The project number badge pops in
+            const badge = sheet.querySelector('span[aria-hidden]');
+            if (badge) {
+                tl.fromTo(badge,
+                    { scale: 0, rotation: -45 },
+                    {
+                        scale: 1,
+                        rotation: 0,
+                        duration: 0.4,
+                        ease: 'back.out(3)',
+                        onComplete: () => gsap.set(badge, { clearProps: 'transform' }),
+                    },
+                    '-=0.5',
+                );
+            }
+
+            // Text content slides up
+            const textBlock = sheet.querySelector('.flex.min-w-0.flex-col');
+            if (textBlock) {
+                tl.fromTo(textBlock,
+                    { autoAlpha: 0, y: 25 },
+                    {
+                        autoAlpha: 1,
+                        y: 0,
+                        duration: 0.6,
+                        ease: 'power2.out',
+                        onComplete: () => gsap.set(textBlock, { clearProps: 'opacity,transform,visibility' }),
+                    },
+                    '-=0.6',
+                );
             }
         });
-    }, { threshold: 0.18, rootMargin: '0px 0px -48px 0px' });
 
-    revealTargets.forEach((target) => posterRevealObserver.observe(target));
+        // ---------- CONTACT SECTION ----------
+        // Contact title — words revealed dramatically
+        const contactTitle = folio.querySelector('#contact h2');
+        if (contactTitle) {
+            const contactSplit = SplitText.create(contactTitle, { type: 'words', mask: 'words' });
+            gsap.fromTo(contactSplit.words,
+                { y: '100%' },
+                {
+                    y: '0%',
+                    duration: 0.7,
+                    stagger: 0.04,
+                    ease: 'power4.out',
+                    scrollTrigger: { trigger: contactTitle, start: 'top 85%', once: true },
+                },
+            );
+        }
+
+        // Contact copy (left side) — sweeps in from left
+        const contactCopy = folio.querySelector('.poster-contact-copy');
+        if (contactCopy) {
+            gsap.fromTo(contactCopy,
+                { autoAlpha: 0, x: -60, y: 20 },
+                {
+                    autoAlpha: 1,
+                    x: 0,
+                    y: 0,
+                    duration: 0.9,
+                    ease: 'power3.out',
+                    scrollTrigger: { trigger: contactCopy, start: 'top 85%', once: true },
+                    onComplete: () => gsap.set(contactCopy, { clearProps: 'opacity,transform,visibility' }),
+                },
+            );
+        }
+
+        // Contact paper (form card) — flips in like a card being turned over
+        const contactPaper = folio.querySelector('.poster-contact-paper');
+        if (contactPaper) {
+            const contactFormTl = gsap.timeline({
+                scrollTrigger: { trigger: contactPaper, start: 'top 85%', once: true },
+            });
+
+            contactFormTl.fromTo(contactPaper,
+                { autoAlpha: 0, y: 60, rotationY: -15, scale: 0.9, transformPerspective: 1000 },
+                {
+                    autoAlpha: 1,
+                    y: 0,
+                    rotationY: 0,
+                    scale: 1,
+                    duration: 1,
+                    ease: 'power3.out',
+                    onComplete: () => gsap.set(contactPaper, { clearProps: 'opacity,transform,visibility,perspective' }),
+                },
+            );
+
+            // Form fields appear one by one
+            const formFields = contactPaper.querySelectorAll('.grid.gap-2, button[type="submit"]');
+            if (formFields.length) {
+                contactFormTl.fromTo(formFields,
+                    { autoAlpha: 0, y: 15 },
+                    {
+                        autoAlpha: 1,
+                        y: 0,
+                        duration: 0.4,
+                        stagger: 0.08,
+                        ease: 'power2.out',
+                        onComplete: () => gsap.set(formFields, { clearProps: 'opacity,transform,visibility' }),
+                    },
+                    '-=0.5',
+                );
+            }
+        }
+
+        // ---------- FOOTER ----------
+        const footer = folio.querySelector('footer');
+        if (footer) {
+            const footerCols = footer.querySelectorAll('.grid.gap-10 > div, .grid.gap-10 > nav');
+            if (footerCols.length) {
+                gsap.fromTo(footerCols,
+                    { autoAlpha: 0, y: 25 },
+                    {
+                        autoAlpha: 1,
+                        y: 0,
+                        duration: 0.6,
+                        stagger: 0.1,
+                        ease: 'power2.out',
+                        scrollTrigger: { trigger: footer, start: 'top 90%', once: true },
+                        onComplete: () => gsap.set(footerCols, { clearProps: 'opacity,transform,visibility' }),
+                    },
+                );
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // ACT III — PARALLAX & CONTINUOUS MICRO-INTERACTIONS
+        // Subtle scroll-driven parallax on hero elements to add depth.
+        // ═══════════════════════════════════════════════════════════════
+
+        // Hero image — slight parallax depth effect on scroll
+        const heroArt = folio.querySelector('.poster-hero-art');
+        if (heroArt) {
+            gsap.to(heroArt, {
+                y: -30,
+                ease: 'none',
+                scrollTrigger: {
+                    trigger: '.poster-hero',
+                    start: 'top top',
+                    end: 'bottom top',
+                    scrub: 1,
+                },
+            });
+        }
+
+        // Hero copy — moves at a different rate for parallax
+        const heroCopy = folio.querySelector('.poster-hero-copy');
+        if (heroCopy) {
+            gsap.to(heroCopy, {
+                y: -15,
+                ease: 'none',
+                scrollTrigger: {
+                    trigger: '.poster-hero',
+                    start: 'top top',
+                    end: 'bottom top',
+                    scrub: 1,
+                },
+            });
+        }
+
+        // Section numbers — subtle rotation on scroll for playfulness
+        const sectionNumbers = folio.querySelectorAll('.poster-section-number');
+        sectionNumbers.forEach((num) => {
+            gsap.to(num, {
+                rotation: '+=360',
+                ease: 'none',
+                scrollTrigger: {
+                    trigger: num,
+                    start: 'top bottom',
+                    end: 'top top',
+                    scrub: 2,
+                },
+            });
+        });
+
+    }, folio);
 };
 
 onMounted(() => {
@@ -288,7 +875,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-    posterRevealObserver?.disconnect();
+    portfolioMotionContext?.revert();
     window.removeEventListener('scroll', handleScroll);
 });
 </script>
@@ -346,10 +933,21 @@ onBeforeUnmount(() => {
                 </a>
             </nav>
 
-            <div class="poster-folio w-full overflow-hidden border-2 border-poster-ink bg-poster-paper"
-                :class="{ 'poster-intro-ready': portfolioState !== 'loading' }">
+            <div class="poster-folio w-full overflow-hidden border-2 border-poster-ink bg-poster-paper">
                 <Teleport to="body">
-                    <Loading v-if="portfolioState === 'loading'" />
+                    <Transition
+                        @leave="(el, done) => {
+                            gsap.to(el, {
+                                y: '-100%',
+                                rotation: 4,
+                                duration: 1.2,
+                                ease: 'expo.inOut',
+                                onComplete: done
+                            });
+                        }"
+                    >
+                        <Loading v-if="portfolioState === 'loading'" />
+                    </Transition>
                 </Teleport>
                 <div v-if="portfolioState === 'error'"
                     class="flex flex-wrap items-center justify-between gap-4 border-b border-poster-rule bg-[#f7e5d7] px-4 py-3 text-sm text-poster-ink sm:px-8"
@@ -634,10 +1232,11 @@ onBeforeUnmount(() => {
                         <div class="poster-contact-copy text-white">
                             <div class="mb-5 flex items-center gap-3">
                                 <span class="poster-section-number poster-section-number--yellow">06</span>
-                                <span class="text-xs font-black uppercase tracking-[0.1em] text-white">Let's Connect</span>
+                                <span class="text-xs font-black uppercase tracking-[0.1em] text-white">Let's
+                                    Connect</span>
                             </div>
                             <h2
-                                class="m-0 max-w-[18ch] break-words border-b border-white/60 pb-3 text-4xl font-black leading-[0.98] tracking-[-0.065em] text-white sm:text-6xl">
+                                class="m-0 max-w-[18ch] border-b border-white/60 pb-3 text-4xl font-black leading-[0.98] tracking-[-0.065em] text-white sm:text-6xl">
                                 Let's Connect haha (pls baddie dm me).</h2>
                         </div>
 
@@ -713,7 +1312,8 @@ onBeforeUnmount(() => {
                                     {{ portfolio.profile.name }}<span class="text-poster-green"></span>
                                 </p>
                                 <p class="m-0 max-w-sm text-sm leading-relaxed text-poster-copy/80">
-                                    Professional portfolio. Open to collaboration, project discussions, or just a quick greeting.
+                                    Professional portfolio. Open to collaboration, project discussions, or just a quick
+                                    greeting.
                                 </p>
                             </div>
 
@@ -778,7 +1378,7 @@ onBeforeUnmount(() => {
 
                     <!-- Bottom Bar: Hak Cipta -->
                     <div class="border-t border-poster-ink/10 py-4 text-center text-xs text-poster-copy/70">
-                        &copy; {{ new Date().getFullYear() }} {{ portfolio.profile.name }}. All rights reserved.
+                        &copy; {{ new Date().getFullYear() }} {{ portfolio.profile.name }} All rights reserved.
                     </div>
                 </footer>
             </div>

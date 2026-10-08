@@ -1,96 +1,125 @@
 <script setup>
 import { onBeforeUnmount, onMounted } from 'vue';
+import gsap from 'gsap';
+import { SplitText } from 'gsap/SplitText';
 
 const portraitUrl = '/images/portfolio/loading-head.png';
 let previousBodyOverflow = '';
 
+let entranceTl;
+let headSpin;
+
 onMounted(() => {
     previousBodyOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+
+    // 1. Entrance Animation Timeline
+    entranceTl = gsap.timeline({ defaults: { ease: 'power4.out' } });
+
+    // Animasi 'Kertas' loading jatuh ke meja
+    entranceTl.fromTo('.loader-card',
+        { autoAlpha: 0, scale: 0.85, y: 60, rotationX: 10, rotation: -6 },
+        { autoAlpha: 1, scale: 1, y: 0, rotationX: 0, rotation: -2, duration: 1.2, ease: 'expo.out' }
+    );
+
+    // Lingkaran belakang kepala pop-in
+    entranceTl.fromTo('#loader-circle',
+        { scale: 0, rotation: -45 },
+        { scale: 1, rotation: 0, duration: 1, ease: 'elastic.out(1, 0.5)' },
+        '-=0.8'
+    );
+
+    // Putaran kepala berkelanjutan (Langsung berputar sejak awal, tanpa animasi masuk/muncul)
+    headSpin = gsap.to('.spinning-head', {
+        rotation: 360,
+        duration: 3,
+        repeat: -1,
+        ease: 'none',
+    });
+
+    // Teks judul slide dan bounce
+    const titleSplit = new SplitText('.loader-title', { type: 'chars' });
+    entranceTl.fromTo(titleSplit.chars,
+        { y: '100%', autoAlpha: 0, rotation: -10 },
+        { y: '0%', autoAlpha: 1, rotation: 0, duration: 0.7, stagger: 0.05, ease: 'back.out(2)' },
+        '-=0.6'
+    );
+
+    // Badge pesan berputar dan pop-in
+    entranceTl.fromTo('.loader-badge',
+        { autoAlpha: 0, scale: 0.5, rotation: -15 },
+        { autoAlpha: 1, scale: 1, rotation: 3, duration: 0.7, ease: 'back.out(2)' },
+        '-=0.4'
+    );
+
+    // Animasi fake progress bar
+    entranceTl.to('.loader-bar-fill', {
+        width: '100%',
+        duration: 1.5,
+        ease: 'power2.inOut'
+    }, '-=0.8');
 });
 
 onBeforeUnmount(() => {
     document.body.style.overflow = previousBodyOverflow;
+    if (entranceTl) entranceTl.kill();
+    if (headSpin) headSpin.kill();
 });
 </script>
 
 <template>
-    <div class="poster-table loading-screen" role="status" aria-live="polite" aria-label="Memuat portofolio">
-        <div class="loading-screen__sheet">
-            <img
-                class="loading-screen__portrait"
-                :src="portraitUrl"
-                alt=""
-                width="768"
-                height="952"
-            />
-            <p class="loading-screen__label">bzzzzzz...</p>
-            <p class="loading-screen__message">sek cak, lek gupuh pencet en wingi</p>
+    <div class="fixed inset-0 z-[60] flex items-center justify-center poster-table overflow-hidden loading-screen p-4 sm:p-8"
+        role="status">
+
+        <!-- Wrapper Loading bergaya Kertas Poster -->
+        <div class="loader-card relative z-10 flex flex-col items-center bg-poster-paper border-2 border-poster-ink p-8 sm:p-12 max-w-sm w-full"
+            style="box-shadow: 12px 14px 0 var(--color-poster-shadow)">
+
+            <!-- Aksen "Selotip" -->
+            <div class="absolute -top-4 left-1/2 -translate-x-1/2 w-16 h-8 bg-poster-yellow border-2 border-poster-ink rotate-[-3deg]"
+                style="box-shadow: 3px 3px 0 var(--color-poster-ink)"></div>
+
+            <!-- Spinning Head Avatar (Diperbesar) -->
+            <div class="relative w-40 h-40 md:w-52 md:h-52 mb-7 flex items-center justify-center shrink-0">
+                <div id="loader-circle"
+                    class="absolute inset-0 bg-poster-blue rounded-full border-[3px] border-poster-ink"
+                    style="box-shadow: 6px 6px 0 var(--color-poster-ink)"></div>
+                <!-- Skala gambar dipertahankan w-[95%] agar penuh, animasi masuk ditiadakan -->
+                <img :src="portraitUrl"
+                    class="relative z-10 w-[95%] h-[95%] object-contain spinning-head drop-shadow-xl" alt="Loading" />
+            </div>
+
+            <!-- Title -->
+            <div class="overflow-hidden pb-3 mb-1 text-center">
+                <h2 class="text-4xl md:text-5xl font-black uppercase text-poster-green loader-title tracking-widest leading-none"
+                    style="text-shadow: 3px 3px 0 var(--color-poster-yellow), 5px 5px 0 var(--color-poster-ink)">
+                    SABAR
+                </h2>
+            </div>
+
+            <!-- Message Badge -->
+            <div class="mt-2 px-5 py-2 border-2 border-poster-ink bg-poster-yellow text-poster-ink font-black text-sm md:text-base loader-badge text-center"
+                style="box-shadow: 4px 4px 0 var(--color-poster-ink)">
+                sek cak, lek gupuh pencet en wingi
+            </div>
+
+            <!-- Fake Progress Bar -->
+           
         </div>
     </div>
 </template>
 
 <style scoped>
 .loading-screen {
-    position: fixed;
-    inset: 0;
-    z-index: 60;
-    display: grid;
-    place-items: center;
-    min-height: 100vh;
-    min-height: 100dvh;
-    padding: max(1.25rem, env(safe-area-inset-top)) max(1.25rem, env(safe-area-inset-right))
-        max(1.25rem, env(safe-area-inset-bottom)) max(1.25rem, env(safe-area-inset-left));
+    touch-action: none;
 }
 
-.loading-screen__sheet {
-    display: grid;
-    justify-items: center;
-    width: min(100%, 26rem);
-    padding: clamp(1.25rem, 5vw, 2rem) 1rem 1.5rem;
-    border: 2px solid var(--color-poster-ink);
-    background: var(--color-poster-paper);
-    box-shadow: 8px 8px 0 var(--color-poster-yellow), 11px 11px 0 var(--color-poster-ink);
-    transform: rotate(-1deg);
+.spinning-head {
+    will-change: transform;
 }
 
-.loading-screen__portrait {
-    display: block;
-    width: min(52vw, 15rem);
-    height: auto;
-    object-fit: contain;
-    animation: loading-head-spin 1.7s linear infinite;
-    transform-origin: center;
-}
-
-.loading-screen__label {
-    margin: 0;
-    padding: 0.35rem 0.65rem;
-    background: var(--color-poster-yellow);
-    color: var(--color-poster-ink);
-    font-size: 0.7rem;
-    font-weight: 900;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
-.loading-screen__message {
-    margin: 0.9rem 0 0;
-    color: var(--color-poster-ink);
-    font-size: clamp(1rem, 4vw, 1.2rem);
-    font-weight: 800;
-    text-align: center;
-}
-
-@keyframes loading-head-spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .loading-screen__portrait {
-        animation: none;
-    }
+.loader-card {
+    will-change: transform, opacity;
+    perspective: 1000px;
 }
 </style>
