@@ -37,20 +37,9 @@ onMounted(() => {
         ease: 'none',
     });
 
-    // Teks judul slide dan bounce
-    const titleSplit = new SplitText('.loader-title', { type: 'chars' });
-    entranceTl.fromTo(titleSplit.chars,
-        { y: '100%', autoAlpha: 0, rotation: -10 },
-        { y: '0%', autoAlpha: 1, rotation: 0, duration: 0.7, stagger: 0.05, ease: 'back.out(2)' },
-        '-=0.6'
-    );
 
-    // Badge pesan berputar dan pop-in
-    entranceTl.fromTo('.loader-badge',
-        { autoAlpha: 0, scale: 0.5, rotation: -15 },
-        { autoAlpha: 1, scale: 1, rotation: 3, duration: 0.7, ease: 'back.out(2)' },
-        '-=0.4'
-    );
+
+  
 
     // Animasi fake progress bar
     entranceTl.to('.loader-bar-fill', {

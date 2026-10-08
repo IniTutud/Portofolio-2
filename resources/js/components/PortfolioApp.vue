@@ -674,7 +674,6 @@ const animatePortfolio = () => {
                 },
             );
 
-            // The image inside scales up slightly
             const img = sheet.querySelector('img');
             if (img) {
                 tl.fromTo(img,
@@ -689,8 +688,6 @@ const animatePortfolio = () => {
                     '-=0.7',
                 );
             }
-
-            // The project number badge pops in
             const badge = sheet.querySelector('span[aria-hidden]');
             if (badge) {
                 tl.fromTo(badge,
@@ -706,7 +703,6 @@ const animatePortfolio = () => {
                 );
             }
 
-            // Text content slides up
             const textBlock = sheet.querySelector('.flex.min-w-0.flex-col');
             if (textBlock) {
                 tl.fromTo(textBlock,
@@ -723,8 +719,6 @@ const animatePortfolio = () => {
             }
         });
 
-        // ---------- CONTACT SECTION ----------
-        // Contact title — words revealed dramatically
         const contactTitle = folio.querySelector('#contact h2');
         if (contactTitle) {
             const contactSplit = SplitText.create(contactTitle, { type: 'words', mask: 'words' });
@@ -740,7 +734,6 @@ const animatePortfolio = () => {
             );
         }
 
-        // Contact copy (left side) — sweeps in from left
         const contactCopy = folio.querySelector('.poster-contact-copy');
         if (contactCopy) {
             gsap.fromTo(contactCopy,
@@ -757,7 +750,6 @@ const animatePortfolio = () => {
             );
         }
 
-        // Contact paper (form card) — flips in like a card being turned over
         const contactPaper = folio.querySelector('.poster-contact-paper');
         if (contactPaper) {
             const contactFormTl = gsap.timeline({
@@ -815,27 +807,7 @@ const animatePortfolio = () => {
             }
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        // ACT III — PARALLAX & CONTINUOUS MICRO-INTERACTIONS
-        // Subtle scroll-driven parallax on hero elements to add depth.
-        // ═══════════════════════════════════════════════════════════════
-
-        // Hero image — slight parallax depth effect on scroll
-        const heroArt = folio.querySelector('.poster-hero-art');
-        if (heroArt) {
-            gsap.to(heroArt, {
-                y: -30,
-                ease: 'none',
-                scrollTrigger: {
-                    trigger: '.poster-hero',
-                    start: 'top top',
-                    end: 'bottom top',
-                    scrub: 1,
-                },
-            });
-        }
-
-        // Hero copy — moves at a different rate for parallax
+      
         const heroCopy = folio.querySelector('.poster-hero-copy');
         if (heroCopy) {
             gsap.to(heroCopy, {
